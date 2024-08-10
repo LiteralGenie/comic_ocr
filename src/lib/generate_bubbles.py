@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from functools import cached_property
 from random import randint
+from uuid import uuid4
 
 import cv2
 import numpy as np
@@ -11,7 +12,7 @@ from lib.misc_utils import generate_poly, rand_gauss
 
 @dataclass
 class Bubble:
-    id: int
+    id: str
     poly: list[tuple[int, int]]
 
     @cached_property
@@ -55,8 +56,8 @@ def generate_bubbles(
     panel: Panel,
     max_tries=6,
     max_points=15,
-):
-    bubbles: list[Bubble] = []
+) -> list[Bubble]:
+    bubbles = []
 
     # generate bubbles
     for idx in range(max_tries):
@@ -68,7 +69,7 @@ def generate_bubbles(
 
         poly = generate_poly((x, y, w, h), max_points)
 
-        b = Bubble(idx, poly)
+        b = Bubble(uuid4().hex, poly)
         bubbles.append(b)
 
     panel_mask = panel.mask

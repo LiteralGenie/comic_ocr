@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from functools import cached_property
 import itertools
 from random import randint
+from uuid import uuid4
 
 import cv2
 import numpy as np
@@ -11,7 +12,7 @@ from lib.misc_utils import Bbox, Xywh, generate_poly
 
 @dataclass
 class Panel:
-    id: int
+    id: str
     poly: list[tuple[int, int]]
     bbox: Bbox
 
@@ -71,7 +72,7 @@ def generate_panels(
     for idx, (xywh, poly) in enumerate(zip(xywh_list, polys)):
         x, y, w, h = xywh
         bbox = (y, x, y + h, x + w)
-        p = Panel(id=idx, poly=poly, bbox=bbox)
+        p = Panel(uuid4().hex, poly, bbox)
         panels.append(p)
 
     grid_wh = (
