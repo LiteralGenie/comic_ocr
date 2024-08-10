@@ -2,6 +2,9 @@ import math
 import random
 from typing import TypeAlias
 
+import cv2
+from cv2.typing import MatLike
+
 from lib.generate_panels import randint
 
 Bbox: TypeAlias = tuple[int, int, int, int]  # top, left, bot, right
@@ -60,3 +63,13 @@ def rand_gauss(mu: float, sigma: float, min: float, max: float):
 
         if x >= min and x <= max:
             return x
+
+
+def rotate(im: MatLike, deg: int):
+    center_x = im.shape[1] // 2
+    center_y = im.shape[0] // 2
+
+    rot_mat = cv2.getRotationMatrix2D((center_x, center_y), deg, 1.0)
+
+    result = cv2.warpAffine(im, rot_mat, im.shape[1::-1], flags=cv2.INTER_LINEAR)
+    return result

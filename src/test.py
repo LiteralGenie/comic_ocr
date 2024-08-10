@@ -12,7 +12,7 @@ from lib.generate_text import Text, generate_texts
 
 FONT_DIR = Path(sys.argv[1])
 
-# random.seed(1)
+# random.seed(99)
 
 
 def main():
@@ -36,7 +36,7 @@ def main():
         for grp in bubble_map.values()
         for b in grp
     }
-    canvas = draw_texts(canvas, text_map)
+    canvas = draw_texts(canvas, bubble_map, text_map)
 
     cv2.imwrite("./tmp.png", canvas)
 
@@ -68,17 +68,38 @@ def draw_bubbles(canvas: MatLike, bubbles: dict[str, list[Bubble]]):
     return canvas
 
 
-def draw_texts(canvas: MatLike, texts: dict[str, list[Text]]):
-    pil_canvas = Image.fromarray(canvas)
+def draw_texts(
+    canvas: MatLike,
+    bubble_map: dict[str, list[Bubble]],
+    text_map: dict[str, list[Text]],
+):
+    pil_canvas = Image.fromarray(canvas).convert("RGBA")
 
-    for grp in texts.values():
+    for id_bubble, grp in text_map.items():
+        bubble = next(
+            b for grp in bubble_map.values() for b in grp if b.id == id_bubble
+        )
+        bubble_center = (
+            bubble.bbox[1] + bubble.width // 2,
+            bubble.bbox[0] + bubble.height // 2,
+        )
+
         for t in grp:
+            render = Image.new("RGBA", (canvas.shape[1], canvas.shape[0]), (0, 0, 0, 0))
             font = ImageFont.truetype(t.fp_font, t.font_size)
 
-            draw = ImageDraw.Draw(pil_canvas)
+            draw = ImageDraw.Draw(render)
             draw.text(t.xy, t.letter, font=font, fill=(0, 0, 255))
 
-    return np.array(pil_canvas)
+            render = render.rotate(
+                t.angle,
+                resample=Image.Resampling.BICUBIC,
+                center=bubble_center,
+            )
+
+            pil_canvas = Image.alpha_composite(pil_canvas, render)
+
+    return np.array(pil_canvas.convert("RGB"))
 
 
 main()

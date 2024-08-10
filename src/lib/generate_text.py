@@ -1,7 +1,9 @@
 from dataclasses import dataclass
+import math
 from pathlib import Path
 from random import randint
 import random
+from typing import Any
 from uuid import uuid4
 
 import cv2
@@ -10,7 +12,7 @@ from PIL import ImageFont, ImageDraw, Image
 import numpy as np
 
 from lib.generate_bubbles import Bubble
-from lib.misc_utils import Bbox
+from lib.misc_utils import Bbox, rotate
 
 
 @dataclass
@@ -21,6 +23,7 @@ class Text:
     fp_font: Path
     font_size: float
     bbox: Bbox
+    angle: int
 
 
 def generate_texts(
@@ -30,6 +33,8 @@ def generate_texts(
     max_tries=2000,
     min_font_size=10,
     max_font_size=40,
+    min_angle=-30,
+    max_angle=30,
 ):
     mask = np.zeros((bubble.height, bubble.width, 3), np.uint8)
     mask.fill(255)
@@ -55,11 +60,20 @@ def generate_texts(
         font_size = randint(min_font_size, max_font_size)
         x = randint(0, bubble.width)
         y = randint(0, bubble.height)
+        angle = randint(min_angle, max_angle)
 
         render = Image.new("RGB", (mask.shape[1], mask.shape[0]))
+
         font = ImageFont.truetype(fp_font, font_size)
         draw = ImageDraw.Draw(render)
         draw.text((x + 1, y + 1), letter, font=font, fill=(255, 255, 255))
+        if _touches_edge(render):
+            continue
+
+        render = render.rotate(angle, fillcolor=(0, 0, 0))
+        if _touches_edge(render):
+            continue
+
         render = np.array(render)
 
         # check if letter extends outside bubble or intersects with existing letters
@@ -69,7 +83,8 @@ def generate_texts(
         if not is_valid:
             continue
 
-        mask = cv2.bitwise_or(render, mask)
+        _, tmp = cv2.threshold(render, 1, 255, cv2.THRESH_BINARY)
+        mask = cv2.bitwise_or(tmp, mask)
 
         try:
             bbox = _get_bbox(render)
@@ -77,7 +92,6 @@ def generate_texts(
             # render is empty or has 1-pixel in height / width
             continue
 
-        # print(letter, (x + bubble.bbox[1], y + bubble.bbox[0]), bubble.id, fp_font.stem)
         texts.append(
             Text(
                 uuid4().hex,
@@ -86,6 +100,7 @@ def generate_texts(
                 fp_font,
                 font_size,
                 bbox,
+                angle,
             )
         )
 
@@ -126,3 +141,23 @@ def _get_bbox(im: MatLike) -> Bbox:
             break
 
     return (y1, x1, y2, x2)
+
+
+def _touches_edge(im: Image.Image):
+    w, h = im.size
+
+    for x in range(w):
+        if im.getpixel((x, 0)) != (0, 0, 0):
+            return True
+
+        if im.getpixel((x, h - 1)) != (0, 0, 0):
+            return True
+
+    for y in range(h):
+        if im.getpixel((0, y)) != (0, 0, 0):
+            return True
+
+        if im.getpixel((w - 1, y)) != (0, 0, 0):
+            return True
+
+    return False
