@@ -30,7 +30,7 @@ def generate_texts(
     bubble: Bubble,
     fp_fonts: list[Path],
     alphabet: list[str],
-    max_tries=2000,
+    max_tries=1000,
     min_font_size=10,
     max_font_size=40,
     min_angle=-30,
@@ -87,9 +87,16 @@ def generate_texts(
         mask = cv2.bitwise_or(tmp, mask)
 
         try:
-            bbox = _get_bbox(render)
+            y1, x1, y2, x2 = _get_bbox(render)
+
+            x1 += bubble.bbox[1] - 1
+            x2 += bubble.bbox[1] - 1
+            y1 += bubble.bbox[0] - 1
+            y2 += bubble.bbox[0] - 1
+
+            bbox = (y1, x1, y2, x2)
         except:
-            # render is empty or has 1-pixel in height / width
+            # render is empty or has 1-pixel height / width
             continue
 
         texts.append(
@@ -116,33 +123,36 @@ def _get_bbox(im: MatLike) -> Bbox:
         if not is_empty:
             break
 
-    for idx in range(x1 + 1, im.shape[1]):
+    for idx in range(im.shape[1] - 1, -1, -1):
         x2 = idx
 
         slice = im[:, x2, :]
         is_empty = np.all(slice == (0, 0, 0))
-        if is_empty:
+        if not is_empty:
             break
 
-    for idx in range(im.shape[1]):
+    for idx in range(im.shape[0]):
         y1 = idx
 
-        slice = im[:, y1, :]
+        slice = im[y1, :, :]
         is_empty = np.all(slice == (0, 0, 0))
         if not is_empty:
             break
 
-    for idx in range(y1 + 1, im.shape[1]):
+    for idx in range(im.shape[0] - 1, -1, -1):
         y2 = idx
 
-        slice = im[:, y2, :]
+        slice = im[y2, :, :]
         is_empty = np.all(slice == (0, 0, 0))
-        if is_empty:
+        if not is_empty:
             break
 
+    assert y1 < y2
+    assert x1 < x2
     return (y1, x1, y2, x2)
 
 
+# @todo: _touches_edge() is slow
 def _touches_edge(im: Image.Image):
     w, h = im.size
 

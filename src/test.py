@@ -97,6 +97,10 @@ def draw_texts(
                 center=bubble_center,
             )
 
+            y1, x1, y2, x2 = t.bbox
+            draw = ImageDraw.Draw(render)
+            draw.rectangle((x1, y1, x2, y2), outline=(255, 0, 0))
+
             pil_canvas = Image.alpha_composite(pil_canvas, render)
 
     return np.array(pil_canvas.convert("RGB"))
