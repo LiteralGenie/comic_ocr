@@ -11,6 +11,8 @@ Xywh: TypeAlias = tuple[int, int, int, int]
 def generate_poly(
     xywh: Xywh,
     max_points: int,
+    mu=0.85,
+    sigma=0.25,
 ):
     x, y, w, h = xywh
     center_x = x + w / 2
@@ -25,7 +27,7 @@ def generate_poly(
         angle = idx * (2 * math.pi / num_points)
 
         while True:
-            r = max_r * rand_gauss(0.85, 0.25, 0, 1)
+            r = max_r * rand_gauss(mu, sigma, 0, 1)
 
             pt = (
                 int(center_x + r * math.cos(angle)),

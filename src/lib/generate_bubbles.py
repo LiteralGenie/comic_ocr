@@ -54,14 +54,14 @@ class Bubble:
 def generate_bubbles(
     panel: Panel,
     max_tries=6,
-    max_points=10,
+    max_points=15,
 ):
     bubbles: list[Bubble] = []
 
     # generate bubbles
     for idx in range(max_tries):
-        w = int(panel.width * rand_gauss(0.5, 0.25, 0, 1)) + 1
-        h = int(panel.height * rand_gauss(0.5, 0.25, 0, 1)) + 1
+        w = int(panel.width * rand_gauss(0.75, 0.25, 0, 1)) + 1
+        h = int(panel.height * rand_gauss(0.75, 0.25, 0, 1)) + 1
 
         x = randint(panel.bbox[1], panel.bbox[3] - w)
         y = randint(panel.bbox[0], panel.bbox[2] - h)

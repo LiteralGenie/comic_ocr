@@ -44,11 +44,11 @@ class Panel:
 
 
 def generate_panels(
-    num_rows=6,
-    num_cols=4,
+    num_rows=9,
+    num_cols=6,
     max_panels=10,
-    scale_factor=250,
-    max_poly_points=10,
+    scale_factor=150,
+    max_poly_points=15,
 ) -> tuple[list[Panel], tuple[int, int]]:
     xywh_list = _generate_panel_rects(
         num_rows,
@@ -61,6 +61,8 @@ def generate_panels(
         generate_poly(
             xywh,
             max_poly_points,
+            1.1,
+            0.25,
         )
         for xywh in xywh_list
     ]
