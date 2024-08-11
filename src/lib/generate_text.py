@@ -31,8 +31,8 @@ def generate_texts(
     fp_fonts: list[Path],
     alphabet: list[str],
     max_tries=1000,
-    min_font_size=10,
-    max_font_size=40,
+    min_font_size=20,
+    max_font_size=50,
     min_angle=-30,
     max_angle=30,
 ):
