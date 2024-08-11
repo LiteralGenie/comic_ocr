@@ -76,6 +76,11 @@ def export_recognition_labels(ctx: RenderContext, im: Image.Image) -> list[dict]
     for id, t in ctx.text_map.items():
         y1, x1, y2, x2 = t.bbox
 
+        x1 = max(x1 - 1, 0)
+        x2 = min(x2 + 1, im.size[0] - 1)
+        y1 = max(y1 - 1, 0)
+        y2 = min(y2 + 1, im.size[1] - 1)
+
         labels.append(
             dict(
                 id=id,
