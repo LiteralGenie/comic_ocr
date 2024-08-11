@@ -13,6 +13,7 @@ from lib.misc_utils import generate_poly, rand_gauss
 @dataclass
 class Bubble:
     id: str
+    id_panel: str
     poly: list[tuple[int, int]]
 
     @cached_property
@@ -69,7 +70,7 @@ def generate_bubbles(
 
         poly = generate_poly((x, y, w, h), max_points)
 
-        b = Bubble(uuid4().hex, poly)
+        b = Bubble(uuid4().hex, panel.id, poly)
         bubbles.append(b)
 
     panel_mask = panel.mask
@@ -109,7 +110,7 @@ def generate_bubbles(
             )
             for xy in new_poly
         ]
-        after_panel_filter.append(Bubble(b.id, new_poly))
+        after_panel_filter.append(Bubble(b.id, panel.id, new_poly))
 
     # filter bubbles that intersect
     canvas = np.zeros(panel.mask.shape, np.uint8)

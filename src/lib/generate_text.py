@@ -18,6 +18,7 @@ from lib.misc_utils import Bbox, rotate
 @dataclass
 class Text:
     id: str
+    id_bubble: str
     letter: str
     xy: tuple[int, int]
     fp_font: Path
@@ -102,6 +103,7 @@ def generate_texts(
         texts.append(
             Text(
                 uuid4().hex,
+                bubble.id,
                 letter,
                 (x + bubble.bbox[1], y + bubble.bbox[0]),
                 fp_font,
@@ -147,8 +149,8 @@ def _get_bbox(im: MatLike) -> Bbox:
         if not is_empty:
             break
 
-    assert y1 < y2
-    assert x1 < x2
+    assert y1 < y2  # type: ignore
+    assert x1 < x2  # type: ignore
     return (y1, x1, y2, x2)
 
 
