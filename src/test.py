@@ -103,7 +103,7 @@ def draw_panels(ctx: RenderContext, canvas: Image.Image):
                 (p.bbox[1], p.bbox[0]),
                 (p.bbox[3], p.bbox[2]),
             ),
-            (randint(0, 255), randint(0, 255), randint(0, 255), 255),
+            (randint(0, 255), randint(0, 255), randint(0, 255), 127),
         )
 
         canvas_data = np.array(canvas)
@@ -130,16 +130,17 @@ def draw_bubbles(ctx: RenderContext, canvas: Image.Image):
 def draw_texts(ctx: RenderContext, canvas: Image.Image):
     for t in ctx.text_map.values():
         bubble = ctx.bubble_map[t.id_bubble]
-        bubble_center = (
-            bubble.bbox[1] + bubble.width // 2,
-            bubble.bbox[0] + bubble.height // 2,
-        )
+        bubble_center = (bubble.width // 2, bubble.height // 2)
 
-        render = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
+        render = Image.new("RGBA", (bubble.width, bubble.height), (0, 0, 0, 0))
         font = ImageFont.truetype(ctx.font_map[t.font_file], t.font_size)
 
+        x, y = t.xy
+        x -= bubble.bbox[1]
+        y -= bubble.bbox[0]
+
         draw = ImageDraw.Draw(render)
-        draw.text(t.xy, t.letter, font=font, fill=(255, 255, 255, 255))
+        draw.text((x, y), t.letter, font=font, fill=(255, 255, 255, 255))
 
         render = render.rotate(
             t.angle,
@@ -148,10 +149,15 @@ def draw_texts(ctx: RenderContext, canvas: Image.Image):
         )
 
         y1, x1, y2, x2 = t.bbox
-        draw = ImageDraw.Draw(render)
-        draw.rectangle((x1, y1, x2, y2), outline=(0, 255, 0))
+        x1 -= bubble.bbox[1]
+        x2 -= bubble.bbox[1]
+        y1 -= bubble.bbox[0]
+        y2 -= bubble.bbox[0]
 
-        canvas = Image.alpha_composite(canvas, render)
+        draw = ImageDraw.Draw(render)
+        draw.rectangle((x1, y1, x2, y2), outline=(0, 255, 0, 255))
+
+        canvas.paste(render, (bubble.bbox[1], bubble.bbox[0]), render)
 
     return canvas
 

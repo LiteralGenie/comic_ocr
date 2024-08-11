@@ -115,36 +115,24 @@ def generate_texts(
 
 
 def _get_bbox(im: MatLike) -> Bbox:
-    for idx in range(im.shape[1]):
-        x1 = idx
+    h, w, _ = im.shape
 
-        slice = im[:, x1, :]
-        is_empty = np.all(slice == (0, 0, 0))
-        if not is_empty:
+    data = np.array(im)
+
+    for x1 in range(w):
+        if np.any(data[:, x1, :] != (0, 0, 0)):
             break
 
-    for idx in range(im.shape[1] - 1, -1, -1):
-        x2 = idx
-
-        slice = im[:, x2, :]
-        is_empty = np.all(slice == (0, 0, 0))
-        if not is_empty:
+    for x2 in range(w - 1, -1, -1):
+        if np.any(data[:, x2, :] != (0, 0, 0)):
             break
 
-    for idx in range(im.shape[0]):
-        y1 = idx
-
-        slice = im[y1, :, :]
-        is_empty = np.all(slice == (0, 0, 0))
-        if not is_empty:
+    for y1 in range(h):
+        if np.any(data[y1, :, :] != (0, 0, 0)):
             break
 
-    for idx in range(im.shape[0] - 1, -1, -1):
-        y2 = idx
-
-        slice = im[y2, :, :]
-        is_empty = np.all(slice == (0, 0, 0))
-        if not is_empty:
+    for y2 in range(h - 1, -1, -1):
+        if np.any(data[y2, :, :] != (0, 0, 0)):
             break
 
     assert y1 < y2  # type: ignore
@@ -152,22 +140,21 @@ def _get_bbox(im: MatLike) -> Bbox:
     return (y1, x1, y2, x2)
 
 
-# @todo: _touches_edge() is slow
 def _touches_edge(im: Image.Image):
     w, h = im.size
 
-    for x in range(w):
-        if im.getpixel((x, 0)) != (0, 0, 0):
-            return True
+    data = np.array(im)
 
-        if im.getpixel((x, h - 1)) != (0, 0, 0):
-            return True
+    if np.any(data[0, :, :] != (0, 0, 0)):
+        return True
 
-    for y in range(h):
-        if im.getpixel((0, y)) != (0, 0, 0):
-            return True
+    if np.any(data[h - 1, :, :] != (0, 0, 0)):
+        return True
 
-        if im.getpixel((w - 1, y)) != (0, 0, 0):
-            return True
+    if np.any(data[:, 0, :] != (0, 0, 0)):
+        return True
+
+    if np.any(data[:, w - 1, :] != (0, 0, 0)):
+        return True
 
     return False

@@ -423,19 +423,20 @@ def _render_text(
     canvas: Image.Image,
 ) -> Image.Image:
     bubble = ctx.bubble_map[text.id_bubble]
-    bubble_center = (
-        bubble.bbox[1] + bubble.width // 2,
-        bubble.bbox[0] + bubble.height // 2,
-    )
+    bubble_center = (bubble.width // 2, bubble.height // 2)
 
-    render = Image.new("RGBA", canvas.size, (0, 0, 0, 0))
+    render = Image.new("RGBA", (bubble.width, bubble.height), (0, 0, 0, 0))
     font = ImageFont.truetype(
         ctx.font_map[text.font_file],
         text.font_size,
     )
 
+    x, y = text.xy
+    x -= bubble.bbox[1]
+    y -= bubble.bbox[0]
+
     draw = ImageDraw.Draw(render)
-    draw.text(text.xy, text.letter, font=font, fill=info.fill)
+    draw.text((x, y), text.letter, font=font, fill=info.fill)
 
     render = render.rotate(
         text.angle,
@@ -443,7 +444,7 @@ def _render_text(
         center=bubble_center,
     )
 
-    canvas = Image.alpha_composite(canvas, render)
+    canvas.paste(render, (bubble.bbox[1], bubble.bbox[0]), render)
 
     return canvas
 
