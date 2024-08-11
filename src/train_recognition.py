@@ -51,9 +51,11 @@ def main():
 
     (DATASET_DIR / "train_labels.json").write_text(
         json.dumps(train_labels),
+        encoding="utf-8",
     )
     (DATASET_DIR / "val_labels.json").write_text(
         json.dumps(val_labels),
+        encoding="utf-8",
     )
 
     train_recognition(
@@ -67,6 +69,7 @@ def main():
             freeze_backbone=False,
             #
             batch_size=128,
+            lr=0.00005,
             #
             train_samples=1000,
             val_samples=1000,
@@ -77,7 +80,6 @@ def main():
             epochs=10,
             device=None,
             input_size=32,
-            lr=0.001,
             weight_decay=0,
             workers=None,
             resume=None,

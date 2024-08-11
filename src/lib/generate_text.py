@@ -63,9 +63,14 @@ def generate_texts(
 
         render = Image.new("RGB", (mask.shape[1], mask.shape[0]))
 
-        font = ImageFont.truetype(font_map[font_file], font_size)
-        draw = ImageDraw.Draw(render)
-        draw.text((x + 1, y + 1), letter, font=font, fill=(255, 255, 255))
+        try:
+            font = ImageFont.truetype(font_map[font_file], font_size)
+            draw = ImageDraw.Draw(render)
+            draw.text((x + 1, y + 1), letter, font=font, fill=(255, 255, 255))
+        except OSError:
+            print(f"Typeset with {font_map[font_file]} failed")
+            continue
+
         if _touches_edge(render):
             continue
 

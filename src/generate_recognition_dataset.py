@@ -20,23 +20,29 @@ NUM_SAMPLES = int(sys.argv[4])
 
 OUT_DIR.mkdir(exist_ok=True)
 
-NUM_WORKERS = 8
+NUM_WORKERS = 1  # 8
 
 
 def main():
     db = init_db()
 
-    with multiprocessing.Pool(NUM_WORKERS) as pool:
-        pbar = tqdm(total=NUM_SAMPLES)
-        for d in pool.imap_unordered(make_recognition_sample, range(NUM_SAMPLES)):
-            pbar.update()
+    try:
+        with multiprocessing.Pool(NUM_WORKERS) as pool:
+            pbar = tqdm()
+            for idx, d in enumerate(
+                pool.imap_unordered(make_recognition_sample, range(NUM_SAMPLES))
+            ):
+                pbar.update(len(d["recognition"]))
 
-            for data in d["recognition"]:
-                fp_out = OUT_DIR / f"{data['id']}.png"
-                data["sample"].save(fp_out)
-                insert_recognition_label(db, data)
+                for data in d["recognition"]:
+                    fp_out = OUT_DIR / f"{data['id']}.png"
+                    data["sample"].save(fp_out)
+                    insert_recognition_label(db, data)
 
-            db.commit()
+                if idx % 10 == 0:
+                    db.commit()
+    finally:
+        db.commit()
 
 
 def init_db():
