@@ -36,6 +36,8 @@ def main():
                 data["sample"].save(fp_out)
                 insert_recognition_label(db, data)
 
+            db.commit()
+
 
 def init_db():
     db = sqlite3.connect(OUT_DIR / "reco_labels.sqlite")
@@ -106,8 +108,6 @@ def insert_recognition_label(db: sqlite3.Connection, data: dict):
             data["label"],
         ],
     )
-
-    db.commit()
 
 
 if __name__ == "__main__":
