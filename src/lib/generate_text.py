@@ -1,9 +1,7 @@
 from dataclasses import dataclass
-import math
 from pathlib import Path
 from random import randint
 import random
-from typing import Any
 from uuid import uuid4
 
 import cv2
@@ -12,7 +10,7 @@ from PIL import ImageFont, ImageDraw, Image
 import numpy as np
 
 from lib.generate_bubbles import Bubble
-from lib.misc_utils import Bbox, rotate
+from lib.misc_utils import Bbox
 
 
 @dataclass
@@ -21,7 +19,7 @@ class Text:
     id_bubble: str
     letter: str
     xy: tuple[int, int]
-    fp_font: Path
+    font_file: str
     font_size: float
     bbox: Bbox
     angle: int
@@ -29,7 +27,7 @@ class Text:
 
 def generate_texts(
     bubble: Bubble,
-    fp_fonts: list[Path],
+    font_map: dict[str, Path],
     alphabet: list[str],
     max_tries=1000,
     min_font_size=20,
@@ -57,7 +55,7 @@ def generate_texts(
     texts: list[Text] = []
     for idx in range(max_tries):
         letter = random.choice(alphabet)
-        fp_font = random.choice(fp_fonts)
+        font_file = random.choice(list(font_map.keys()))
         font_size = randint(min_font_size, max_font_size)
         x = randint(0, bubble.width)
         y = randint(0, bubble.height)
@@ -65,7 +63,7 @@ def generate_texts(
 
         render = Image.new("RGB", (mask.shape[1], mask.shape[0]))
 
-        font = ImageFont.truetype(fp_font, font_size)
+        font = ImageFont.truetype(font_map[font_file], font_size)
         draw = ImageDraw.Draw(render)
         draw.text((x + 1, y + 1), letter, font=font, fill=(255, 255, 255))
         if _touches_edge(render):
@@ -106,7 +104,7 @@ def generate_texts(
                 bubble.id,
                 letter,
                 (x + bubble.bbox[1], y + bubble.bbox[0]),
-                fp_font,
+                font_file,
                 font_size,
                 bbox,
                 angle,
