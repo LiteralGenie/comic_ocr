@@ -50,7 +50,13 @@ def generate_panels(
     max_panels=10,
     scale_factor=150,
     max_poly_points=15,
+    max_margin=2,
 ) -> tuple[list[Panel], tuple[int, int]]:
+    mt = randint(0, max_margin * scale_factor)
+    ml = randint(0, max_margin * scale_factor)
+    mb = randint(0, max_margin * scale_factor)
+    mr = randint(0, max_margin * scale_factor)
+
     xywh_list = _generate_panel_rects(
         num_rows,
         num_cols,
@@ -71,13 +77,17 @@ def generate_panels(
     panels = []
     for idx, (xywh, poly) in enumerate(zip(xywh_list, polys)):
         x, y, w, h = xywh
+
+        x += ml
+        y += mt
+
         bbox = (y, x, y + h, x + w)
         p = Panel(uuid4().hex, poly, bbox)
         panels.append(p)
 
     grid_wh = (
-        num_cols * scale_factor,
-        num_rows * scale_factor,
+        ml + mr + num_cols * scale_factor,
+        mt + mb + num_rows * scale_factor,
     )
 
     return panels, grid_wh

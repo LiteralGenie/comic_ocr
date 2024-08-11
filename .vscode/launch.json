@@ -11,7 +11,8 @@
             "program": "src/test.py",
             "console": "integratedTerminal",
             "args": [
-                "${workspaceFolder}/assets/fonts"
+                "${workspaceFolder}/assets/fonts",
+                "${workspaceFolder}/assets/images"
             ]
         }
     ]

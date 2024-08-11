@@ -1,105 +1,53 @@
 from pathlib import Path
-import random
+import pickle
 import sys
-import cv2
-from cv2.typing import MatLike
-import numpy as np
-from PIL import Image, ImageDraw, ImageFont
 from lib.constants import HANGUL_SYLLABLES
-from lib.generate_bubbles import Bubble, generate_bubbles
-from lib.generate_panels import Panel, generate_panels
-from lib.generate_text import Text, generate_texts
+from lib.generate_bubbles import generate_bubbles
+from lib.generate_panels import generate_panels
+from lib.generate_text import generate_texts
+from lib.render_page import RenderContext, build_render_info, render_page
 
 FONT_DIR = Path(sys.argv[1])
+IMAGE_DIR = Path(sys.argv[2])
 
 # random.seed(99)
 
 
 def main():
-    panels, wh = generate_panels()
-    panel_map = {p.id: p for p in panels}
+    # font_map = {fp.name: fp for fp in FONT_DIR.glob("**/*.ttf")}
 
-    canvas = np.zeros((wh[1], wh[0], 3), np.uint8)
-    canvas.fill(255)
-    canvas = draw_panels(canvas, panel_map)
+    # panels, wh = generate_panels()
+    # panel_map = {p.id: p for p in panels}
 
-    bubble_map = {b.id: b for p in panels for b in generate_bubbles(p)}
-    canvas = draw_bubbles(canvas, bubble_map)
+    # bubble_map = {b.id: b for p in panels for b in generate_bubbles(p)}
 
-    fp_fonts = list(FONT_DIR.glob("**/*.ttf"))
-    text_map = {
-        t.id: t
-        for b in bubble_map.values()
-        for t in generate_texts(
-            b,
-            fp_fonts,
-            HANGUL_SYLLABLES,
-        )
-    }
-    canvas = draw_texts(canvas, bubble_map, text_map)
+    # text_map = {
+    #     t.id: t
+    #     for b in bubble_map.values()
+    #     for t in generate_texts(
+    #         b,
+    #         font_map,
+    #         HANGUL_SYLLABLES,
+    #     )
+    # }
 
-    cv2.imwrite("./tmp.png", canvas)
+    # ctx = RenderContext(
+    #     font_map,
+    #     IMAGE_DIR,
+    #     wh,
+    #     panel_map,
+    #     bubble_map,
+    #     text_map,
+    # )
+    # with open(Path("./ctx.pkl"), "wb") as file:
+    #     pickle.dump(ctx, file)
 
+    with open(Path("./ctx.pkl"), "rb") as file:
+        ctx: RenderContext = pickle.load(file)
 
-def draw_panels(canvas: MatLike, panel_map: dict[str, Panel]):
-    for p in panel_map.values():
-        cv2.rectangle(
-            canvas,
-            (p.bbox[1], p.bbox[0]),
-            (p.bbox[3], p.bbox[2]),
-            (0, 255, 255),
-            3,
-        )
-
-        pts = np.array(p.poly)
-        pts = pts.reshape((-1, 1, 2))
-        cv2.polylines(canvas, [pts], True, (0, 0, 0), 5)
-
-    return canvas
-
-
-def draw_bubbles(canvas: MatLike, bubbles: dict[str, Bubble]):
-    for b in bubbles.values():
-        pts = np.array(b.poly)
-        pts = pts.reshape((-1, 1, 2))
-        cv2.polylines(canvas, [pts], True, (0, 255, 0), 3)
-
-    return canvas
-
-
-def draw_texts(
-    canvas: MatLike,
-    bubble_map: dict[str, Bubble],
-    text_map: dict[str, Text],
-):
-    pil_canvas = Image.fromarray(canvas).convert("RGBA")
-
-    for t in text_map.values():
-        bubble = bubble_map[t.id_bubble]
-        bubble_center = (
-            bubble.bbox[1] + bubble.width // 2,
-            bubble.bbox[0] + bubble.height // 2,
-        )
-
-        render = Image.new("RGBA", (canvas.shape[1], canvas.shape[0]), (0, 0, 0, 0))
-        font = ImageFont.truetype(t.fp_font, t.font_size)
-
-        draw = ImageDraw.Draw(render)
-        draw.text(t.xy, t.letter, font=font, fill=(0, 0, 255))
-
-        render = render.rotate(
-            t.angle,
-            resample=Image.Resampling.BICUBIC,
-            center=bubble_center,
-        )
-
-        y1, x1, y2, x2 = t.bbox
-        draw = ImageDraw.Draw(render)
-        draw.rectangle((x1, y1, x2, y2), outline=(255, 0, 0))
-
-        pil_canvas = Image.alpha_composite(pil_canvas, render)
-
-    return np.array(pil_canvas.convert("RGB"))
+    info = build_render_info(ctx)
+    im = render_page(ctx, info)
+    im.save("tmp.png")
 
 
 main()
