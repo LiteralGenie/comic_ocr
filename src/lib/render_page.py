@@ -11,7 +11,7 @@ import numpy as np
 from lib.generate_bubbles import Bubble
 from lib.generate_panels import Panel
 from lib.generate_text import Text
-from lib.misc_utils import Bbox
+from lib.misc_utils import Bbox, rand_gauss
 
 Rgba: TypeAlias = tuple[int, int, int, int]
 
@@ -31,8 +31,9 @@ class RenderContext:
     max_image_noise: float = 0.75
     max_panel_stroke_width: int = 5
     max_bubble_stroke_width: int = 10
-    max_image_rotate = 45
-    min_text_opacity = 127
+    max_image_rotate: int = 45
+    min_text_opacity: int = 127
+    min_image_crop_frac: float = 0.2
     p_image_flip_x: float = 0.5
     p_image_flip_y: float = 0.5
     p_image_inv: float = 0.5
@@ -195,8 +196,8 @@ def _pick_image(ctx: RenderContext) -> ImageRenderInfo:
 
     im = Image.open(fp)
 
-    x1, x2 = _pick_int(0, im.size[0], 2)
-    y1, y2 = _pick_int(0, im.size[1], 2)
+    x1, x2 = _pick_subrange(0, im.size[0], ctx.min_image_crop_frac)
+    y1, y2 = _pick_subrange(0, im.size[1], ctx.min_image_crop_frac)
     crop = (y1, x1, y2, x2)
 
     flip_x = random.random() < ctx.p_image_flip_x
@@ -233,20 +234,22 @@ def _pick_color():
     )
 
 
-def _pick_int(mn: int, mx: int, n: int):
-    picks = []
-
+def _pick_subrange(mn: int, mx: int, min_dist_frac: float):
     while True:
-        x = random.randint(mn, mx)
-        if x in picks:
+        x1 = random.randint(mn, mx)
+        x2 = random.randint(mn, mx)
+
+        if x1 == x2:
             continue
 
-        picks.append(x)
-        if len(picks) == n:
-            break
+        if x1 > x2:
+            x1, x2 = x2, x1
 
-    picks.sort()
-    return picks
+        dist_frac = (x2 - x1) / (mx - mn)
+        if dist_frac < min_dist_frac:
+            continue
+
+        return (x1, x2)
 
 
 def _pick_image_or_fill(ctx: RenderContext):
