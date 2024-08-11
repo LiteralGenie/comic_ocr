@@ -7,8 +7,7 @@ import sys
 
 from PIL import Image
 
-from lib.constants import HANGUL_SYLLABLES, KOREAN_ALPHABET
-from lib.detection import train_detection
+from lib.constants import KOREAN_ALPHABET
 from lib.recognition import train_recognition
 
 """
@@ -27,16 +26,16 @@ VAL_SPLIT = 0.1
 
 
 def main():
-    db = sqlite3.connect(DATASET_DIR / "labels.sqlite")
+    db = sqlite3.connect(DATASET_DIR / "reco_labels.sqlite")
     db.row_factory = sqlite3.Row
 
     labels = {
         f'{r["id"]}.png': r["label"]
-        for r in db.execute("SELECT id, label FROM recognition_labels").fetchall()
+        for r in db.execute("SELECT id, label FROM labels").fetchall()
     }
     for r in labels:
-        # assert (DATASET_DIR / "recognition" / k).exists(), k
-        # assert Image.open(DATASET_DIR / "recognition" / k).load()
+        # assert (DATASET_DIR / k).exists(), k
+        # assert Image.open(DATASET_DIR / k).load()
         pass
 
     num_train = int((1 - VAL_SPLIT) * len(labels))
@@ -50,16 +49,16 @@ def main():
         f"Found {len(train_labels)} training samples and {len(val_labels)} validation samples"
     )
 
-    (DATASET_DIR / "recognition" / "train_labels.json").write_text(
+    (DATASET_DIR / "train_labels.json").write_text(
         json.dumps(train_labels),
     )
-    (DATASET_DIR / "recognition" / "val_labels.json").write_text(
+    (DATASET_DIR / "val_labels.json").write_text(
         json.dumps(val_labels),
     )
 
     train_recognition(
         Namespace(
-            dataset_path=str(DATASET_DIR / "recognition"),
+            dataset_path=str(DATASET_DIR),
             save_path=str(MODEL_DIR),
             vocab="".join(KOREAN_ALPHABET),
             #

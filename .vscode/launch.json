@@ -16,6 +16,22 @@
             ]
         },
         {
+            "name": "generate_detection_dataset.py",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "src/generate_detection_dataset.py",
+            "console": "integratedTerminal",
+            "args": "${command:pickArgs}"
+        },
+        {
+            "name": "generate_recognition_dataset.py",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "src/generate_recognition_dataset.py",
+            "console": "integratedTerminal",
+            "args": "${command:pickArgs}"
+        },
+        {
             "name": "train_detection.py",
             "type": "debugpy",
             "request": "launch",
