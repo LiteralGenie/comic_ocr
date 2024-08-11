@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python Debugger: Current File with Arguments",
+            "name": "test.py",
             "type": "debugpy",
             "request": "launch",
             "program": "src/test.py",
@@ -14,6 +14,22 @@
                 "${workspaceFolder}/assets/fonts",
                 "${workspaceFolder}/assets/images"
             ]
-        }
+        },
+        {
+            "name": "train_detection.py",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "src/train_detection.py",
+            "console": "integratedTerminal",
+            "args": "${command:pickArgs}"
+        },
+        {
+            "name": "train_recognition.py",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "src/train_recognition.py",
+            "console": "integratedTerminal",
+            "args": "${command:pickArgs}"
+        },
     ]
 }
