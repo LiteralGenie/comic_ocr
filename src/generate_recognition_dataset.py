@@ -26,6 +26,8 @@ NUM_WORKERS = 1  # 8
 def main():
     db = init_db()
 
+    count = 0
+
     try:
         with multiprocessing.Pool(NUM_WORKERS) as pool:
             pbar = tqdm()
@@ -38,6 +40,10 @@ def main():
                     fp_out = OUT_DIR / f"{data['id']}.png"
                     data["sample"].save(fp_out)
                     insert_recognition_label(db, data)
+
+                    count += len(d["recognition"])
+                    if count >= NUM_SAMPLES:
+                        break
 
                 if idx % 10 == 0:
                     db.commit()

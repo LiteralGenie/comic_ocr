@@ -1,0 +1,19 @@
+{
+    "python.analysis.autoImportCompletions": true,
+    "python.analysis.typeCheckingMode": "basic",
+    "editor.formatOnSave": true,
+    "python.analysis.packageIndexDepths": [
+        {
+            "name": "cv2",
+            "depth": 2
+        },
+        {
+            "name": "PIL",
+            "depth": 3
+        },
+        {
+            "name": "doctr",
+            "depth": 3
+        }
+    ]
+}
