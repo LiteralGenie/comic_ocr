@@ -1,7 +1,8 @@
 from pathlib import Path
 import sys
 from PIL import Image, ImageDraw, ImageFont
-from doctr.io import DocumentFile
+from doctr.io import Document, DocumentFile
+import numpy as np
 import torch
 from doctr.models import ocr_predictor, db_resnet50, parseq
 
@@ -11,6 +12,8 @@ TEST_DIR = Path(sys.argv[1])
 DET_WEIGHTS = Path(sys.argv[2])
 RECO_WEIGHTS = Path(sys.argv[3])
 FONT_FILE = Path(sys.argv[4])
+FONT_SIZE = 20
+LABEL_OFFSET_Y = -20
 
 det_model = db_resnet50(pretrained=False, pretrained_backbone=False)
 det_params = torch.load(DET_WEIGHTS, map_location="cpu")
@@ -28,13 +31,16 @@ predictor = ocr_predictor(
 
 fp_tests = list(TEST_DIR.glob("**/*.png")) + list(TEST_DIR.glob("**/*.jpg"))
 
-font = ImageFont.truetype(FONT_FILE, 40)
+font = ImageFont.truetype(FONT_FILE, FONT_SIZE)
 
 for fp in fp_tests:
-    doc = DocumentFile.from_images([fp])
-    output = predictor(doc)
-
     im = Image.open(fp).convert("RGBA")
+
+    crop_x = min(im.size[0], 1024)
+    crop_y = min(im.size[1], 1024)
+    crop_data = np.asarray(im.convert("RGB").crop((0, 0, crop_x, crop_y)))
+
+    output: Document = predictor([crop_data])
 
     lines: list[str] = []
     for page in output.pages:
@@ -47,10 +53,10 @@ for fp in fp_tests:
                     draw = ImageDraw.Draw(canvas)
 
                     ((x1, y1), (x2, y2)) = w.geometry
-                    x1 *= im.size[0]
-                    x2 *= im.size[0]
-                    y1 *= im.size[1]
-                    y2 *= im.size[1]
+                    x1 *= crop_x  # im.size[0]
+                    x2 *= crop_x  # im.size[0]
+                    y1 *= crop_y  # im.size[1]
+                    y2 *= crop_y  # im.size[1]
 
                     a = int(w.confidence * 255)
 
@@ -63,7 +69,7 @@ for fp in fp_tests:
                     )
 
                     draw.text(
-                        (x1, y1 - 10),
+                        (x1, y1 + LABEL_OFFSET_Y),
                         w.value,
                         font=font,
                         fill=(0, 255, 0, a),
