@@ -1,2 +1,5 @@
 llm spellcheck
 real validation data
+argparse
+synth eval
+word gen

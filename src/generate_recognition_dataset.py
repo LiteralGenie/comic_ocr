@@ -20,7 +20,7 @@ NUM_SAMPLES = int(sys.argv[4])
 
 OUT_DIR.mkdir(exist_ok=True)
 
-NUM_WORKERS = 8
+NUM_WORKERS = 4
 
 
 def main():
@@ -30,7 +30,7 @@ def main():
 
     try:
         with multiprocessing.Pool(NUM_WORKERS) as pool:
-            pbar = tqdm()
+            pbar = tqdm(total=NUM_SAMPLES)
             for idx, d in enumerate(
                 pool.imap_unordered(make_recognition_sample, range(NUM_SAMPLES))
             ):

@@ -4,6 +4,7 @@ import multiprocessing
 import sqlite3
 import sys
 from pathlib import Path
+import traceback
 
 from PIL import Image
 import numpy as np
@@ -23,15 +24,20 @@ NUM_SAMPLES = int(sys.argv[4])
 
 OUT_DIR.mkdir(exist_ok=True)
 
-NUM_WORKERS = 8
+NUM_WORKERS = 4
 
 
 def main():
     db = init_db()
 
+    count = 0
+
     with multiprocessing.Pool(NUM_WORKERS) as pool:
         pbar = tqdm(total=NUM_SAMPLES)
         for d in pool.imap_unordered(make_detection_sample, range(NUM_SAMPLES)):
+            if not d:
+                continue
+
             pbar.update()
 
             img_hash = d["detection"]["label"]["img_hash"]
@@ -39,6 +45,9 @@ def main():
 
             d["detection"]["sample"].save(fp_out)
             insert_detection_label(db, d["detection"]["label"])
+
+            if count >= NUM_SAMPLES:
+                return
 
 
 def init_db():
@@ -59,21 +68,26 @@ def init_db():
     return db
 
 
-def make_detection_sample(_) -> dict:
-    ctx = make_context(FONT_DIR, IMAGE_DIR)
-    info = build_render_info(ctx)
+def make_detection_sample(_) -> dict | None:
+    try:
+        ctx = make_context(FONT_DIR, IMAGE_DIR)
+        info = build_render_info(ctx)
 
-    sample = render_page(ctx, info)
-    label = export_detection_label(ctx, sample)
+        sample = render_page(ctx, info)
+        label = export_detection_label(ctx, sample)
 
-    return dict(
-        ctx=ctx,
-        info=info,
-        detection=dict(
-            sample=sample,
-            label=label,
-        ),
-    )
+        return dict(
+            ctx=ctx,
+            info=info,
+            detection=dict(
+                sample=sample,
+                label=label,
+            ),
+        )
+    except:
+        traceback.print_exc()
+
+        return None
 
 
 def export_detection_label(ctx: RenderContext, im: Image.Image) -> dict:

@@ -38,7 +38,7 @@ def main():
         det_arch=det_model,
         reco_arch=reco_model,
         pretrained=False,
-    )
+    ).cuda()
 
     fp_tests = list(TEST_DIR.glob("**/*.png")) + list(TEST_DIR.glob("**/*.jpg"))
 
