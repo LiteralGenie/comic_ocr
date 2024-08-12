@@ -5,6 +5,7 @@ from typing import TypeAlias
 
 import cv2
 from cv2.typing import MatLike
+import numpy as np
 
 Bbox: TypeAlias = tuple[int, int, int, int]  # top, left, bot, right
 Xywh: TypeAlias = tuple[int, int, int, int]
@@ -72,3 +73,13 @@ def rotate(im: MatLike, deg: int):
 
     result = cv2.warpAffine(im, rot_mat, im.shape[1::-1], flags=cv2.INTER_LINEAR)
     return result
+
+
+def dilate(im: MatLike, size: int) -> MatLike:
+    kernel = cv2.getStructuringElement(
+        cv2.MORPH_RECT,
+        (2 * size + 1, 2 * size + 1),
+        (size, size),
+    )
+    im = cv2.dilate(im, kernel)
+    return im

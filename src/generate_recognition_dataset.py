@@ -70,7 +70,7 @@ def init_db():
 
 
 def make_recognition_sample(_) -> dict:
-    ctx = make_context(FONT_DIR, IMAGE_DIR)
+    ctx = make_context(FONT_DIR, IMAGE_DIR, text_max_bbox_dilation=5)
     info = build_render_info(ctx)
 
     det_sample = render_page(ctx, info)

@@ -8,7 +8,11 @@ from lib.generate_text import generate_texts
 from lib.render_page import RenderContext
 
 
-def make_context(font_dir: Path, image_dir: Path):
+def make_context(
+    font_dir: Path,
+    image_dir: Path,
+    text_max_bbox_dilation=1,
+):
     font_map = {fp.name: fp for fp in font_dir.glob("**/*.ttf")}
     for k, v in list(font_map.items()):
         if not _is_valid_font(v):
@@ -27,6 +31,7 @@ def make_context(font_dir: Path, image_dir: Path):
             b,
             font_map,
             KOREAN_ALPHABET,
+            max_bbox_dilation=text_max_bbox_dilation,
         )
     }
 

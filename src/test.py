@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from random import randint
 import sys
@@ -12,6 +13,7 @@ from lib.generate_text import generate_texts
 from lib.label_utils import make_context
 from lib.render_page import (
     RenderContext,
+    dump_dataclass,
     build_render_info,
     render_page,
 )
@@ -24,7 +26,24 @@ IMAGE_DIR = Path(sys.argv[2])
 
 def main():
     ctx = make_context(FONT_DIR, IMAGE_DIR)
+    Path("./ctx.json").write_text(
+        json.dumps(
+            dump_dataclass(ctx),
+            indent=2,
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
     info = build_render_info(ctx)
+    Path("./info.json").write_text(
+        json.dumps(
+            dump_dataclass(info),
+            indent=2,
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
 
     im = render_page(ctx, info)
     im.save("preview.png")

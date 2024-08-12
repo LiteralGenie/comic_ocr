@@ -50,7 +50,7 @@ def generate_panels(
     min_cols=3,
     max_cols=12,
     panel_tries=50,
-    scale_factor=150,
+    scale_factor=120,
     max_poly_points=15,
     max_margin=1.5,
 ) -> tuple[list[Panel], tuple[int, int]]:

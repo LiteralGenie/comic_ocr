@@ -45,7 +45,7 @@ class RenderContext:
         return list(self.image_dir.glob("*.png"))
 
     def dump(self):
-        return _dump_dataclass(self)
+        return dump_dataclass(self)
 
 
 @dataclass
@@ -71,7 +71,7 @@ class PageRenderInfo:
     panels: dict[str, "PanelRenderInfo"]
 
     def dump(self):
-        return _dump_dataclass(self)
+        return dump_dataclass(self)
 
 
 @dataclass
@@ -452,14 +452,14 @@ def _render_text(
     return canvas
 
 
-def _dump_dataclass(instance) -> dict:
+def dump_dataclass(instance) -> dict:
     data = dict()
 
     for f in fields(instance):
         val = getattr(instance, f.name)
 
         if is_dataclass(val):
-            data[f.name] = _dump_dataclass(val)
+            data[f.name] = dump_dataclass(val)
         else:
             data[f.name] = _dump(val)
 
@@ -480,7 +480,7 @@ def _dump(x):
     elif isinstance(x, dict):
         return {k: _dump(v) for k, v in x.items()}
     elif is_dataclass(x):
-        return _dump_dataclass(x)
+        return dump_dataclass(x)
     elif x is None:
         return None
     else:

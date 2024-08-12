@@ -10,7 +10,7 @@ from PIL import ImageFont, ImageDraw, Image
 import numpy as np
 
 from lib.generate_bubbles import Bubble
-from lib.misc_utils import Bbox
+from lib.misc_utils import Bbox, dilate
 
 
 @dataclass
@@ -34,7 +34,8 @@ def generate_texts(
     max_font_size=50,
     min_angle=-30,
     max_angle=30,
-    max_bbox_dilation=4,
+    max_bbox_dilation=1,
+    mask_dilation=1,
 ):
     mask = np.zeros((bubble.height, bubble.width, 3), np.uint8)
     mask.fill(255)
@@ -82,28 +83,33 @@ def generate_texts(
         render = np.array(render)
 
         # check if letter extends outside bubble or intersects with existing letters
+        render_dilated = dilate(render.copy(), mask_dilation)
+
         mask_gray = cv2.cvtColor(mask, cv2.COLOR_BGR2GRAY)
-        intersection = cv2.bitwise_and(render, mask, mask=mask_gray)
-        is_valid = np.max(intersection) == 0
+        intersection = cv2.bitwise_and(render_dilated, mask, mask=mask_gray)
+        is_valid = np.all(intersection == 0)
         if not is_valid:
             continue
 
-        _, tmp = cv2.threshold(render, 1, 255, cv2.THRESH_BINARY)
-        mask = cv2.bitwise_or(tmp, mask)
+        mask = cv2.bitwise_or(render_dilated, mask)
 
         try:
             y1, x1, y2, x2 = _get_bbox(render)
 
-            x1 += bubble.bbox[1] - 1 - randint(1, max_bbox_dilation)
+            x1 += bubble.bbox[1] - 1
+            x1 -= randint(1, max_bbox_dilation)
             x1 = max(x1, 0)
 
-            x2 += bubble.bbox[1] - 1 + randint(1, max_bbox_dilation)
+            x2 += bubble.bbox[1] - 1
+            x2 += randint(1, max_bbox_dilation)
             x2 = min(x2, bubble.bbox[3] - 1)
 
-            y1 += bubble.bbox[0] - 1 - randint(1, max_bbox_dilation)
+            y1 += bubble.bbox[0] - 1
+            y1 -= randint(1, max_bbox_dilation)
             y1 = max(y1, 0)
 
-            y2 += bubble.bbox[0] - 1 + randint(1, max_bbox_dilation)
+            y2 += bubble.bbox[0] - 1
+            y2 += randint(1, max_bbox_dilation)
             y2 = min(y2, bubble.bbox[2] - 1)
 
             bbox = (y1, x1, y2, x2)
