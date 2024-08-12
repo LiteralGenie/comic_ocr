@@ -46,9 +46,9 @@ class Panel:
 
 def generate_panels(
     min_rows=3,
-    max_rows=9,
+    max_rows=12,
     min_cols=3,
-    max_cols=9,
+    max_cols=12,
     panel_tries=50,
     scale_factor=150,
     max_poly_points=15,

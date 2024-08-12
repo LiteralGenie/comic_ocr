@@ -1,11 +1,10 @@
 import math
 import random
+from random import randint
 from typing import TypeAlias
 
 import cv2
 from cv2.typing import MatLike
-
-from lib.generate_panels import randint
 
 Bbox: TypeAlias = tuple[int, int, int, int]  # top, left, bot, right
 Xywh: TypeAlias = tuple[int, int, int, int]

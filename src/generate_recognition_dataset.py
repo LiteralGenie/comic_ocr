@@ -20,7 +20,7 @@ NUM_SAMPLES = int(sys.argv[4])
 
 OUT_DIR.mkdir(exist_ok=True)
 
-NUM_WORKERS = 1  # 8
+NUM_WORKERS = 8
 
 
 def main():
@@ -41,9 +41,9 @@ def main():
                     data["sample"].save(fp_out)
                     insert_recognition_label(db, data)
 
-                    count += len(d["recognition"])
+                    count += 1
                     if count >= NUM_SAMPLES:
-                        break
+                        return
 
                 if idx % 10 == 0:
                     db.commit()
