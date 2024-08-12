@@ -69,7 +69,7 @@ def main():
             freeze_backbone=False,
             #
             batch_size=128,
-            lr=0.00005,
+            lr=0.00075,
             #
             train_samples=1000,
             val_samples=1000,

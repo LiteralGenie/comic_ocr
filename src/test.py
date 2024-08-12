@@ -1,6 +1,4 @@
-import json
 from pathlib import Path
-import pickle
 from random import randint
 import sys
 
@@ -11,8 +9,8 @@ from lib.constants import HANGUL_SYLLABLES
 from lib.generate_bubbles import generate_bubbles
 from lib.generate_panels import generate_panels
 from lib.generate_text import generate_texts
+from lib.label_utils import make_context
 from lib.render_page import (
-    PageRenderInfo,
     RenderContext,
     build_render_info,
     render_page,
@@ -25,63 +23,14 @@ IMAGE_DIR = Path(sys.argv[2])
 
 
 def main():
-    ctx = make_context()
-    # with open(Path("./ctx.pkl"), "rb") as file:
-    #     ctx: RenderContext = pickle.load(file)
-    #     Path("./ctx.json").write_text(json.dumps(ctx.dump(), indent=2))
-    preview_layout(ctx).save("layout.png")
-
-    info = make_render_info(ctx)
-    # with open(Path("./info.pkl"), "rb") as file:
-    #     info: PageRenderInfo = pickle.load(file)
+    ctx = make_context(FONT_DIR, IMAGE_DIR)
+    info = build_render_info(ctx)
 
     im = render_page(ctx, info)
     im.save("preview.png")
     im.convert("L").save("preview_bw.png")
 
-
-def make_context():
-    font_map = {fp.name: fp for fp in FONT_DIR.glob("**/*.ttf")}
-
-    panels, wh = generate_panels()
-    panel_map = {p.id: p for p in panels}
-    print(f"{len(panel_map)} panels")
-
-    bubble_map = {b.id: b for p in panels for b in generate_bubbles(p)}
-    print(f"{len(bubble_map)} bubbles")
-
-    text_map = {
-        t.id: t
-        for b in bubble_map.values()
-        for t in generate_texts(
-            b,
-            font_map,
-            HANGUL_SYLLABLES,
-        )
-    }
-    print(f"{len(text_map)} characters")
-
-    ctx = RenderContext(
-        font_map,
-        IMAGE_DIR,
-        wh,
-        panel_map,
-        bubble_map,
-        text_map,
-    )
-    with open(Path("./ctx.pkl"), "wb") as file:
-        pickle.dump(ctx, file)
-
-    return ctx
-
-
-def make_render_info(ctx: RenderContext):
-    info = build_render_info(ctx)
-    Path("./info.pkl").write_text(json.dumps(info.dump(), indent=2))
-    with open(Path("./info.pkl"), "wb") as file:
-        pickle.dump(info, file)
-
-    return info
+    preview_layout(ctx).save("layout.png")
 
 
 def preview_layout(ctx: RenderContext):
