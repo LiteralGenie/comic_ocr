@@ -34,6 +34,7 @@ def generate_texts(
     max_font_size=50,
     min_angle=-30,
     max_angle=30,
+    max_bbox_dilation=4,
 ):
     mask = np.zeros((bubble.height, bubble.width, 3), np.uint8)
     mask.fill(255)
@@ -93,10 +94,17 @@ def generate_texts(
         try:
             y1, x1, y2, x2 = _get_bbox(render)
 
-            x1 += bubble.bbox[1] - 1
-            x2 += bubble.bbox[1] - 1
-            y1 += bubble.bbox[0] - 1
-            y2 += bubble.bbox[0] - 1
+            x1 += bubble.bbox[1] - 1 - randint(1, max_bbox_dilation)
+            x1 = max(x1, 0)
+
+            x2 += bubble.bbox[1] - 1 + randint(1, max_bbox_dilation)
+            x2 = min(x2, bubble.bbox[3] - 1)
+
+            y1 += bubble.bbox[0] - 1 - randint(1, max_bbox_dilation)
+            y1 = max(y1, 0)
+
+            y2 += bubble.bbox[0] - 1 + randint(1, max_bbox_dilation)
+            y2 = min(y2, bubble.bbox[2] - 1)
 
             bbox = (y1, x1, y2, x2)
         except:

@@ -1,8 +1,7 @@
-import math
 from pathlib import Path
 import sys
 from PIL import Image, ImageDraw, ImageFont
-from doctr.io import Document, DocumentFile
+from doctr.io import Document
 from doctr.models.predictor import OCRPredictor
 import numpy as np
 import torch
@@ -72,8 +71,10 @@ def _eval(
 
     preview_im = Image.new("RGB", im.size)
     for r in results:
-        y1, x1, y2, x2 = r["window"]["bbox"]
-        preview_im.paste(r["preview"], (x1, y1))
+        y1, x1, y2, x2 = r["window"]["bbox_cov"]
+        offset = (x1 - r["window"]["bbox"][1], y1 - r["window"]["bbox"][0])
+        crop = offset + r["preview"].size
+        preview_im.paste(r["preview"].crop(crop), (x1, y1))
 
     return dict(
         im=im,

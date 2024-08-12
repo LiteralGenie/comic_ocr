@@ -23,6 +23,8 @@ MODEL_DIR = Path(sys.argv[2])
 
 VAL_SPLIT = 0.1
 
+MODEL_DIR.mkdir(exist_ok=True)
+
 
 def main():
     db = sqlite3.connect(DATASET_DIR / "det_labels.sqlite")
