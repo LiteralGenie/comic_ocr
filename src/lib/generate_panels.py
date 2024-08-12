@@ -45,8 +45,10 @@ class Panel:
 
 
 def generate_panels(
-    num_rows=9,
-    num_cols=6,
+    min_rows=3,
+    max_rows=9,
+    min_cols=3,
+    max_cols=9,
     panel_tries=50,
     scale_factor=150,
     max_poly_points=15,
@@ -56,6 +58,9 @@ def generate_panels(
     ml = randint(0, int(max_margin * scale_factor))
     mb = randint(0, int(max_margin * scale_factor))
     mr = randint(0, int(max_margin * scale_factor))
+
+    num_rows = randint(min_rows, max_rows)
+    num_cols = randint(min_cols, max_cols)
 
     xywh_list = _generate_panel_rects(
         num_rows,
