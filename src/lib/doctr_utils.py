@@ -12,6 +12,8 @@ import math
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+from torch.optim.lr_scheduler import MultiplicativeLR
+from torch.utils.data import DataLoader
 from tqdm.auto import tqdm
 
 
@@ -152,3 +154,76 @@ def fit_one_epoch(
         loss_avg = sum(losses) / len(losses)
 
         pbar.set_description(f"Training loss: {loss_avg:.6f}")
+
+
+def record_lr(
+    model: torch.nn.Module,
+    train_loader: DataLoader,
+    batch_transforms,
+    optimizer,
+    start_lr: float = 1e-7,
+    end_lr: float = 1,
+    num_it: int = 100,
+    amp: bool = False,
+):
+    """Gridsearch the optimal learning rate for the training.
+    Adapted from https://github.com/frgfm/Holocron/blob/master/holocron/trainer/core.py
+    """
+    if num_it > len(train_loader):
+        raise ValueError(
+            "the value of `num_it` needs to be lower than the number of available batches"
+        )
+
+    model = model.train()
+    # Update param groups & LR
+    optimizer.defaults["lr"] = start_lr
+    for pgroup in optimizer.param_groups:
+        pgroup["lr"] = start_lr
+
+    gamma = (end_lr / start_lr) ** (1 / (num_it - 1))
+    scheduler = MultiplicativeLR(optimizer, lambda step: gamma)
+
+    lr_recorder = [start_lr * gamma**idx for idx in range(num_it)]
+    loss_recorder = []
+
+    if amp:
+        scaler = torch.cuda.amp.GradScaler()
+
+    for batch_idx, (images, targets) in enumerate(train_loader):
+        if torch.cuda.is_available():
+            images = images.cuda()
+
+        images = batch_transforms(images)
+
+        # Forward, Backward & update
+        optimizer.zero_grad()
+        if amp:
+            with torch.cuda.amp.autocast():
+                train_loss = model(images, targets)["loss"]
+            scaler.scale(train_loss).backward()
+            # Gradient clipping
+            scaler.unscale_(optimizer)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 5)
+            # Update the params
+            scaler.step(optimizer)
+            scaler.update()
+        else:
+            train_loss = model(images, targets)["loss"]
+            train_loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 5)
+            optimizer.step()
+        # Update LR
+        scheduler.step()
+
+        # Record
+        if not torch.isfinite(train_loss):
+            if batch_idx == 0:
+                raise ValueError("loss value is NaN or inf.")
+            else:
+                break
+        loss_recorder.append(train_loss.item())
+        # Stop after the number of iterations
+        if batch_idx + 1 == num_it:
+            break
+
+    return lr_recorder[: len(loss_recorder)], loss_recorder

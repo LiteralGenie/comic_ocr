@@ -1,4 +1,5 @@
 from argparse import Namespace
+import argparse
 import json
 from pathlib import Path
 import random
@@ -18,28 +19,19 @@ as mentioned here
     https://github.com/mindee/doctr/discussions/1667#discussioncomment-9997544
 """
 
-DATASET_DIR = Path(sys.argv[1])
-MODEL_DIR = Path(sys.argv[2])
 
-VAL_SPLIT = 0.1
+def run(args):
+    args.model_dir.mkdir(exist_ok=True)
 
-MODEL_DIR.mkdir(exist_ok=True)
-
-
-def main():
-    db = sqlite3.connect(DATASET_DIR / "det_labels.sqlite")
+    db = sqlite3.connect(args.dataset_dir / "det_labels.sqlite")
     db.row_factory = sqlite3.Row
 
     labels = {
         f'{r["id"]}.png': json.loads(r["data"])
         for r in db.execute("SELECT id, data FROM labels")
     }
-    for k in labels:
-        # assert (DATASET_DIR / 'detection' / k).exists(), k
-        # assert Image.open(DATASET_DIR / 'detection' / k).load()
-        pass
 
-    num_train = int((1 - VAL_SPLIT) * len(labels))
+    num_train = int((1 - args.split) * len(labels))
 
     keys = list(labels.keys())
     random.shuffle(keys)
@@ -50,30 +42,30 @@ def main():
         f"Found {len(train_labels)} training samples and {len(val_labels)} validation samples"
     )
 
-    (DATASET_DIR / "train_labels.json").write_text(
+    (args.dataset_dir / "train_labels.json").write_text(
         json.dumps(train_labels),
     )
-    (DATASET_DIR / "val_labels.json").write_text(
+    (args.dataset_dir / "val_labels.json").write_text(
         json.dumps(val_labels),
     )
 
     train_detection(
         Namespace(
-            dataset_path=str(DATASET_DIR),
-            save_path=str(MODEL_DIR),
+            dataset_path=str(args.dataset_dir),
+            save_path=str(args.model_dir),
             #
-            arch="db_resnet50",
+            arch=args.arch,
             pretrained=True,
             freeze_backbone=False,
             #
-            batch_size=4,
+            batch_size=args.batch_size,
+            epochs=args.epochs,
+            lr=args.lr,
             #
             name=None,
-            epochs=100,
             device=None,
             save_interval_epoch=False,
             input_size=1024,
-            lr=0.001,
             weight_decay=0,
             workers=None,
             resume=None,
@@ -93,4 +85,51 @@ def main():
     )
 
 
-main()
+def parse_args():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "dataset_dir",
+        type=Path,
+        help="path to files created by generate_detection_dataset.py",
+    )
+    parser.add_argument(
+        "model_dir",
+        type=Path,
+        help="model weights will be saved to this folder",
+    )
+    parser.add_argument(
+        "--arch",
+        type=str,
+        default="db_resnet50",
+        help="https://mindee.github.io/doctr/modules/models.html",
+    )
+    parser.add_argument(
+        "--batch-size",
+        dest="batch_size",
+        type=int,
+        default=4,
+    )
+    parser.add_argument(
+        "--epochs",
+        type=int,
+        default=100,
+    )
+    parser.add_argument(
+        "--lr",
+        type=float,
+        default=0.002,
+    )
+    parser.add_argument(
+        "--split",
+        type=float,
+        default=0.1,
+        help="percentage of dataset to reserve for validation",
+    )
+
+    return parser.parse_args()
+
+
+if __name__ == "__main__":
+    args = parse_args()
+    run(args)
