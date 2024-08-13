@@ -33,12 +33,15 @@ class RenderContext:
     max_bubble_stroke_width: int = 10
     max_image_rotate: int = 45
     min_text_opacity: int = 127
+    min_bubble_opacity: int = 127
     min_image_crop_frac: float = 0.2
     p_image_flip_x: float = 0.5
     p_image_flip_y: float = 0.5
     p_image_inv: float = 0.5
-    p_image: float = 0.6
-    p_fill: float = 0.2
+    p_page_image: float = 0.6
+    p_page_fill: float = 0.2
+    p_panel_image: float = 0.6
+    p_panel_fill: float = 0.2
 
     @cached_property
     def fp_images(self):
@@ -89,13 +92,7 @@ class BubbleRenderInfo:
     stroke_color: Rgba
     stroke_width: int
     fill: Rgba
-
-    texts: dict[str, "TextRenderInfo"]
-
-
-@dataclass
-class TextRenderInfo:
-    fill: Rgba
+    text_color: Rgba
 
 
 def build_render_info(ctx: RenderContext) -> PageRenderInfo:
@@ -107,13 +104,6 @@ def build_render_info(ctx: RenderContext) -> PageRenderInfo:
     for b in ctx.bubble_map.values():
         panel_info = info.panels[b.id_panel]
         panel_info.bubbles[b.id] = _pick_bubble_render(ctx)
-
-    for t in ctx.text_map.values():
-        bubble = ctx.bubble_map[t.id_bubble]
-        panel_info = info.panels[bubble.id_panel]
-        bubble_info = panel_info.bubbles[bubble.id]
-
-        bubble_info.texts[t.id] = _pick_text_render(ctx)
 
     return info
 
@@ -135,14 +125,17 @@ def render_page(ctx: RenderContext, info: PageRenderInfo) -> Image.Image:
         for bid, bubble in panel.bubbles.items():
             canvas = _render_bubble(ctx, ctx.bubble_map[bid], bubble, canvas)
 
-            for tid, text in bubble.texts.items():
-                canvas = _render_text(ctx, ctx.text_map[tid], text, canvas)
+            for text in ctx.text_map.values():
+                if text.id_bubble != bid:
+                    continue
+
+                canvas = _render_text(ctx, bubble, text, canvas)
 
     return canvas
 
 
 def _pick_page_render(ctx: RenderContext) -> PageRenderInfo:
-    image, fill = _pick_image_or_fill(ctx)
+    image, fill = _pick_image_or_fill(ctx, ctx.p_page_image, ctx.p_page_fill)
 
     return PageRenderInfo(
         wh=ctx.wh,
@@ -155,7 +148,7 @@ def _pick_page_render(ctx: RenderContext) -> PageRenderInfo:
 def _pick_panel_render(ctx: RenderContext) -> PanelRenderInfo:
     stroke_color = _pick_color()
     stroke_width = random.randint(0, ctx.max_panel_stroke_width)
-    image, fill = _pick_image_or_fill(ctx)
+    image, fill = _pick_image_or_fill(ctx, ctx.p_panel_image, ctx.p_panel_fill)
 
     return PanelRenderInfo(
         stroke_color=stroke_color,
@@ -169,22 +162,22 @@ def _pick_panel_render(ctx: RenderContext) -> PanelRenderInfo:
 def _pick_bubble_render(ctx: RenderContext) -> BubbleRenderInfo:
     stroke_color = _pick_color()
     stroke_width = random.randint(0, ctx.max_panel_stroke_width)
-    fill = _pick_color()
+
+    contrast = 0
+    while contrast < 3:
+        fill = _pick_color()
+        fill = fill[:3] + (random.randint(ctx.min_bubble_opacity, 255),)
+
+        text_color = _pick_color()
+        text_color = text_color[:3] + (random.randint(ctx.min_text_opacity, 255),)
+
+        contrast = _guess_contrast(fill, text_color)
 
     return BubbleRenderInfo(
         stroke_color=stroke_color,
         stroke_width=stroke_width,
         fill=fill,
-        texts=dict(),
-    )
-
-
-def _pick_text_render(ctx: RenderContext) -> TextRenderInfo:
-    fill = _pick_color()
-    fill = fill[:3] + (random.randint(ctx.min_text_opacity, 255),)
-
-    return TextRenderInfo(
-        fill=fill,
+        text_color=text_color,
     )
 
 
@@ -252,13 +245,17 @@ def _pick_subrange(mn: int, mx: int, min_dist_frac: float):
         return (x1, x2)
 
 
-def _pick_image_or_fill(ctx: RenderContext):
+def _pick_image_or_fill(
+    ctx: RenderContext,
+    p_image: float,
+    p_fill: float,
+):
     bg_weights = [
         int(100 * p)
         for p in [
-            ctx.p_image,
-            ctx.p_fill,
-            1 - (ctx.p_image + ctx.p_fill),
+            p_image,
+            p_fill,
+            1 - (p_image + p_fill),
         ]
     ]
     bg_type = random.sample(
@@ -421,8 +418,8 @@ def _render_bubble(
 
 def _render_text(
     ctx: RenderContext,
+    bubble_info: BubbleRenderInfo,
     text: Text,
-    info: TextRenderInfo,
     canvas: Image.Image,
 ) -> Image.Image:
     bubble = ctx.bubble_map[text.id_bubble]
@@ -430,7 +427,7 @@ def _render_text(
 
     render = Image.new("RGBA", (bubble.width, bubble.height), (0, 0, 0, 0))
     font = ImageFont.truetype(
-        ctx.font_map[text.font_file],
+        ctx.font_map[bubble.font_file],
         text.font_size,
     )
 
@@ -439,7 +436,12 @@ def _render_text(
     y -= bubble.bbox[0]
 
     draw = ImageDraw.Draw(render)
-    draw.text((x, y), text.letter, font=font, fill=info.fill)
+    draw.text(
+        (x, y),
+        text.letter,
+        font=font,
+        fill=bubble_info.text_color,
+    )
 
     render = render.rotate(
         text.angle,
@@ -485,3 +487,35 @@ def _dump(x):
         return None
     else:
         raise Exception()
+
+
+def _guess_contrast(a: Rgba, b: Rgba) -> float:
+    la = _calc_luminance(a[:3]) * (a[3] / 255)
+    lb = _calc_luminance(b[:3]) * (b[3] / 255)
+
+    brightest = max(la, lb)
+    darkest = min(la, lb)
+
+    return (brightest + 0.05) / (darkest + 0.05)
+
+
+def _calc_constrast(a: tuple[int, int, int], b: tuple[int, int, int]) -> float:
+    la = _calc_luminance(a)
+    lb = _calc_luminance(b)
+
+    brightest = max(la, lb)
+    darkest = min(la, lb)
+
+    return (brightest + 0.05) / (darkest + 0.05)
+
+
+def _calc_luminance(rgb: tuple[int, int, int]) -> float:
+    def f(x):
+        x /= 255
+        if x < 0.03928:
+            return x / 12.92
+        else:
+            return ((x + 0.055) / 1.055) ** 2.4
+
+    r, g, b = rgb
+    return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b)

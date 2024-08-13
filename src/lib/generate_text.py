@@ -13,13 +13,17 @@ from lib.generate_bubbles import Bubble
 from lib.misc_utils import Bbox, dilate
 
 
+class InvalidFontFile(Exception):
+    def __init__(self, font_file: Path):
+        self.font_file = font_file
+
+
 @dataclass
 class Text:
     id: str
     id_bubble: str
     letter: str
     xy: tuple[int, int]
-    font_file: str
     font_size: float
     bbox: Bbox
     angle: int
@@ -34,7 +38,7 @@ def generate_texts(
     max_font_size=50,
     min_angle=-30,
     max_angle=30,
-    max_bbox_dilation=1,
+    max_bbox_dilation=0,
     mask_dilation=1,
 ):
     mask = np.zeros((bubble.height, bubble.width, 3), np.uint8)
@@ -57,7 +61,6 @@ def generate_texts(
     texts: list[Text] = []
     for idx in range(max_tries):
         letter = random.choice(alphabet)
-        font_file = random.choice(list(font_map.keys()))
         font_size = randint(min_font_size, max_font_size)
         x = randint(0, bubble.width)
         y = randint(0, bubble.height)
@@ -66,12 +69,12 @@ def generate_texts(
         render = Image.new("RGB", (mask.shape[1], mask.shape[0]))
 
         try:
-            font = ImageFont.truetype(font_map[font_file], font_size)
+            fp_font = font_map[bubble.font_file]
+            font = ImageFont.truetype(fp_font, font_size)
             draw = ImageDraw.Draw(render)
             draw.text((x + 1, y + 1), letter, font=font, fill=(255, 255, 255))
         except OSError:
-            print(f"Typeset with {font_map[font_file]} failed")
-            continue
+            raise InvalidFontFile(fp_font)
 
         if _touches_edge(render):
             continue
@@ -97,20 +100,20 @@ def generate_texts(
             y1, x1, y2, x2 = _get_bbox(render)
 
             x1 += bubble.bbox[1] - 1
-            x1 -= randint(1, max_bbox_dilation)
-            x1 = max(x1, 0)
-
             x2 += bubble.bbox[1] - 1
-            x2 += randint(1, max_bbox_dilation)
-            x2 = min(x2, bubble.bbox[3] - 1)
-
             y1 += bubble.bbox[0] - 1
-            y1 -= randint(1, max_bbox_dilation)
-            y1 = max(y1, 0)
-
-            y2 += bubble.bbox[0] - 1
-            y2 += randint(1, max_bbox_dilation)
             y2 = min(y2, bubble.bbox[2] - 1)
+
+            if max_bbox_dilation > 0:
+                x1 -= randint(1, max_bbox_dilation)
+                x2 += randint(1, max_bbox_dilation)
+                y1 -= randint(1, max_bbox_dilation)
+                y2 += randint(1, max_bbox_dilation)
+
+            x1 = max(x1, 0)
+            x2 = min(x2, bubble.bbox[3] - 1)
+            y1 = max(y1, 0)
+            y2 += bubble.bbox[0] - 1
 
             bbox = (y1, x1, y2, x2)
         except:
@@ -123,7 +126,6 @@ def generate_texts(
                 bubble.id,
                 letter,
                 (x + bubble.bbox[1], y + bubble.bbox[0]),
-                font_file,
                 font_size,
                 bbox,
                 angle,

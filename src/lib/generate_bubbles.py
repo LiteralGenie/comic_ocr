@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from functools import cached_property
+from pathlib import Path
 from random import randint
+import random
 from uuid import uuid4
 
 import cv2
@@ -15,6 +17,7 @@ class Bubble:
     id: str
     id_panel: str
     poly: list[tuple[int, int]]
+    font_file: str
 
     @cached_property
     def bbox(self):
@@ -55,10 +58,11 @@ class Bubble:
 
 def generate_bubbles(
     panel: Panel,
-    max_tries=6,
+    font_map: dict[str, Path],
+    max_tries=10,
     max_points=15,
 ) -> list[Bubble]:
-    bubbles = []
+    bubbles: list[Bubble] = []
 
     # generate bubbles
     for idx in range(max_tries):
@@ -70,7 +74,9 @@ def generate_bubbles(
 
         poly = generate_poly((x, y, w, h), max_points)
 
-        b = Bubble(uuid4().hex, panel.id, poly)
+        font_file = random.choice(list(font_map.keys()))
+
+        b = Bubble(uuid4().hex, panel.id, poly, font_file)
         bubbles.append(b)
 
     panel_mask = panel.mask
@@ -110,7 +116,14 @@ def generate_bubbles(
             )
             for xy in new_poly
         ]
-        after_panel_filter.append(Bubble(b.id, panel.id, new_poly))
+        after_panel_filter.append(
+            Bubble(
+                b.id,
+                b.id_panel,
+                new_poly,
+                b.font_file,
+            )
+        )
 
     # filter bubbles that intersect
     canvas = np.zeros(panel.mask.shape, np.uint8)

@@ -69,11 +69,11 @@ def main():
             batch_size=4,
             #
             name=None,
-            epochs=10,
+            epochs=100,
             device=None,
             save_interval_epoch=False,
             input_size=1024,
-            lr=0.01,
+            lr=0.0015,
             weight_decay=0,
             workers=None,
             resume=None,

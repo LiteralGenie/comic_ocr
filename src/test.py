@@ -101,7 +101,7 @@ def draw_texts(ctx: RenderContext, canvas: Image.Image):
         bubble_center = (bubble.width // 2, bubble.height // 2)
 
         render = Image.new("RGBA", (bubble.width, bubble.height), (0, 0, 0, 0))
-        font = ImageFont.truetype(ctx.font_map[t.font_file], t.font_size)
+        font = ImageFont.truetype(ctx.font_map[bubble.font_file], t.font_size)
 
         x, y = t.xy
         x -= bubble.bbox[1]
