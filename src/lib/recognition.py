@@ -37,7 +37,7 @@ from doctr import transforms as T
 from doctr.datasets import VOCABS, WordGenerator, RecognitionDataset
 from doctr.models import login_to_hub, push_to_hf_hub, recognition
 from doctr.utils.metrics import TextMatch
-from lib.doctr_utils import EarlyStopper, plot_recorder, plot_samples
+from lib.doctr_utils import EarlyStopper, fit_one_epoch, plot_recorder, plot_samples
 
 
 def record_lr(
@@ -111,44 +111,6 @@ def record_lr(
             break
 
     return lr_recorder[: len(loss_recorder)], loss_recorder
-
-
-def fit_one_epoch(
-    model, train_loader, batch_transforms, optimizer, scheduler, amp=False
-):
-    if amp:
-        scaler = torch.cuda.amp.GradScaler()
-
-    model.train()
-    # Iterate over the batches of the dataset
-    pbar = tqdm(train_loader, position=1)
-    for images, targets in pbar:
-        if torch.cuda.is_available():
-            images = images.cuda()
-        images = batch_transforms(images)
-
-        train_loss = model(images, targets)["loss"]
-
-        optimizer.zero_grad()
-        if amp:
-            with torch.cuda.amp.autocast():
-                train_loss = model(images, targets)["loss"]
-            scaler.scale(train_loss).backward()
-            # Gradient clipping
-            scaler.unscale_(optimizer)
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 5)
-            # Update the params
-            scaler.step(optimizer)
-            scaler.update()
-        else:
-            train_loss = model(images, targets)["loss"]
-            train_loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 5)
-            optimizer.step()
-
-        scheduler.step()
-
-        pbar.set_description(f"Training loss: {train_loss.item():.6}")
 
 
 @torch.no_grad()

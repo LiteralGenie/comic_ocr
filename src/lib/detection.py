@@ -41,14 +41,9 @@ from doctr.datasets import DetectionDataset
 from doctr.models import detection, login_to_hub, push_to_hf_hub
 from doctr.utils.metrics import LocalizationConfusion
 
-import pickle
-from typing import Dict, List
-
-import cv2
-import matplotlib.pyplot as plt
 import numpy as np
 
-from lib.doctr_utils import plot_recorder, plot_samples, EarlyStopper
+from lib.doctr_utils import fit_one_epoch, plot_recorder, plot_samples, EarlyStopper
 
 
 def record_lr(
@@ -122,42 +117,6 @@ def record_lr(
             break
 
     return lr_recorder[: len(loss_recorder)], loss_recorder
-
-
-def fit_one_epoch(
-    model, train_loader, batch_transforms, optimizer, scheduler, amp=False
-):
-    if amp:
-        scaler = torch.cuda.amp.GradScaler()
-
-    model.train()
-    # Iterate over the batches of the dataset
-    pbar = tqdm(train_loader, position=1)
-    for images, targets in pbar:
-        if torch.cuda.is_available():
-            images = images.cuda()
-        images = batch_transforms(images)
-
-        optimizer.zero_grad()
-        if amp:
-            with torch.cuda.amp.autocast():
-                train_loss = model(images, targets)["loss"]
-            scaler.scale(train_loss).backward()
-            # Gradient clipping
-            scaler.unscale_(optimizer)
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 5)
-            # Update the params
-            scaler.step(optimizer)
-            scaler.update()
-        else:
-            train_loss = model(images, targets)["loss"]
-            train_loss.backward()
-            torch.nn.utils.clip_grad_norm_(model.parameters(), 5)
-            optimizer.step()
-
-        scheduler.step()
-
-        pbar.set_description(f"Training loss: {train_loss.item():.6}")
 
 
 @torch.no_grad()

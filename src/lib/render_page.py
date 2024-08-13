@@ -38,8 +38,8 @@ class RenderContext:
     p_image_flip_x: float = 0.5
     p_image_flip_y: float = 0.5
     p_image_inv: float = 0.5
-    p_page_image: float = 0.6
-    p_page_fill: float = 0.2
+    p_page_image: float = 0.8
+    p_page_fill: float = 0.1
     p_panel_image: float = 0.6
     p_panel_fill: float = 0.2
 

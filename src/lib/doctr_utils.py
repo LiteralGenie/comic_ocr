@@ -11,6 +11,8 @@ import math
 
 import matplotlib.pyplot as plt
 import numpy as np
+import torch
+from tqdm.auto import tqdm
 
 
 def plot_samples(images, targets):
@@ -100,3 +102,53 @@ class EarlyStopper:
             if self.counter >= self.patience:
                 return True
         return False
+
+
+def fit_one_epoch(
+    model,
+    train_loader,
+    batch_transforms,
+    optimizer,
+    scheduler,
+    amp=False,
+):
+    if amp:
+        scaler = torch.cuda.amp.GradScaler()
+
+    losses = []
+    loss_window_width = max(len(train_loader) // 100, 15)
+
+    model.train()
+    # Iterate over the batches of the dataset
+    pbar = tqdm(train_loader, position=1)
+    for images, targets in pbar:
+        if torch.cuda.is_available():
+            images = images.cuda()
+        images = batch_transforms(images)
+
+        optimizer.zero_grad()
+        if amp:
+            with torch.cuda.amp.autocast():
+                train_loss = model(images, targets)["loss"]
+            scaler.scale(train_loss).backward()
+            # Gradient clipping
+            scaler.unscale_(optimizer)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 5)
+            # Update the params
+            scaler.step(optimizer)
+            scaler.update()
+        else:
+            train_loss = model(images, targets)["loss"]
+            train_loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 5)
+            optimizer.step()
+
+        scheduler.step()
+
+        losses.append(train_loss.item())
+        if (overflow := len(losses) - loss_window_width) > 0:
+            losses = losses[overflow:]
+
+        loss_avg = sum(losses) / len(losses)
+
+        pbar.set_description(f"Training loss: {loss_avg:.6f}")

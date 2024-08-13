@@ -73,7 +73,7 @@ def main():
             device=None,
             save_interval_epoch=False,
             input_size=1024,
-            lr=0.0015,
+            lr=0.001,
             weight_decay=0,
             workers=None,
             resume=None,

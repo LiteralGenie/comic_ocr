@@ -2,6 +2,7 @@ import multiprocessing
 import sqlite3
 import sys
 from pathlib import Path
+import traceback
 
 from PIL import Image
 from tqdm import tqdm
@@ -34,6 +35,9 @@ def main():
             for idx, d in enumerate(
                 pool.imap_unordered(make_recognition_sample, range(NUM_SAMPLES))
             ):
+                if not d:
+                    continue
+
                 pbar.update(len(d["recognition"]))
 
                 for data in d["recognition"]:
@@ -69,19 +73,23 @@ def init_db():
     return db
 
 
-def make_recognition_sample(_) -> dict:
-    ctx = make_context(FONT_DIR, IMAGE_DIR, text_max_bbox_dilation=5)
-    info = build_render_info(ctx)
+def make_recognition_sample(_) -> dict | None:
+    try:
+        ctx = make_context(FONT_DIR, IMAGE_DIR, text_max_bbox_dilation=5)
+        info = build_render_info(ctx)
 
-    det_sample = render_page(ctx, info)
+        det_sample = render_page(ctx, info)
 
-    reco_data = export_recognition_labels(ctx, det_sample)
+        reco_data = export_recognition_labels(ctx, det_sample)
 
-    return dict(
-        ctx=ctx,
-        info=info,
-        recognition=reco_data,
-    )
+        return dict(
+            ctx=ctx,
+            info=info,
+            recognition=reco_data,
+        )
+    except:
+        traceback.print_exc()
+        return None
 
 
 def export_recognition_labels(ctx: RenderContext, im: Image.Image) -> list[dict]:
