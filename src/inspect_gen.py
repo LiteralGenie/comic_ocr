@@ -6,10 +6,6 @@ import sys
 from PIL import Image, ImageDraw, ImageFont
 import cv2
 import numpy as np
-from lib.constants import HANGUL_SYLLABLES
-from lib.generate_bubbles import generate_bubbles
-from lib.generate_panels import generate_panels
-from lib.generate_text import generate_texts
 from lib.label_utils import make_context
 from lib.render_page import (
     RenderContext,
