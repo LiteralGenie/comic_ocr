@@ -8,6 +8,7 @@
 # See LICENSE or go to <https://opensource.org/licenses/Apache-2.0> for full license details.
 
 import os
+from pathlib import Path
 
 os.environ["USE_TORCH"] = "1"
 
@@ -159,7 +160,7 @@ def train_detection(args):
     )
 
     # Resume weights
-    if isinstance(args.resume, str):
+    if isinstance(args.resume, Path):
         print(f"Resuming {args.resume}")
         checkpoint = torch.load(args.resume, map_location="cpu")
         model.load_state_dict(checkpoint)

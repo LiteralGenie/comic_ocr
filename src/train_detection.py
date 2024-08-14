@@ -4,9 +4,6 @@ import json
 from pathlib import Path
 import random
 import sqlite3
-import sys
-
-from PIL import Image
 
 from lib.detection import train_detection
 
@@ -31,23 +28,36 @@ def run(args):
         for r in db.execute("SELECT id, data FROM labels")
     }
 
-    num_train = int((1 - args.split) * len(labels))
+    fp_train = args.dataset_dir / "train_labels.json"
+    fp_val = args.dataset_dir / "val_labels.json"
 
-    keys = list(labels.keys())
-    random.shuffle(keys)
+    if args.resume_path:
+        print("Resuming from", args.resume_path)
 
-    train_labels = {k: labels[k] for k in keys[:num_train]}
-    val_labels = {k: labels[k] for k in keys[num_train:]}
+        old_train_labels = (
+            json.loads(fp_train.read_text()) if fp_train.exists() else dict()
+        )
+        old_val_labels = json.loads(fp_val.read_text()) if fp_val.exists() else dict()
+
+        print(
+            f"Found {len(old_train_labels)} existing training samples and {len(old_val_labels)} existing validation samples"
+        )
+
+        train_labels, val_labels = update_labels(
+            args,
+            labels,
+            old_train_labels,
+            old_val_labels,
+        )
+    else:
+        train_labels, val_labels = generate_labels(args, labels)
+
     print(
-        f"Found {len(train_labels)} training samples and {len(val_labels)} validation samples"
+        f"Training with {len(train_labels)} training samples and {len(val_labels)} validation samples"
     )
 
-    (args.dataset_dir / "train_labels.json").write_text(
-        json.dumps(train_labels),
-    )
-    (args.dataset_dir / "val_labels.json").write_text(
-        json.dumps(val_labels),
-    )
+    fp_train.write_text(json.dumps(train_labels))
+    fp_val.write_text(json.dumps(val_labels))
 
     train_detection(
         Namespace(
@@ -61,6 +71,7 @@ def run(args):
             batch_size=args.batch_size,
             epochs=args.epochs,
             lr=args.lr,
+            resume=args.resume_path,
             #
             name=None,
             device=None,
@@ -68,7 +79,6 @@ def run(args):
             input_size=1024,
             weight_decay=0,
             workers=None,
-            resume=None,
             test_only=False,
             show_samples=False,
             wb=False,
@@ -83,6 +93,43 @@ def run(args):
             early_stop_delta=0.01,
         )
     )
+
+
+def generate_labels(
+    args,
+    labels: dict[str, dict],
+) -> tuple[dict[str, dict], dict[str, dict]]:
+    num_train = int((1 - args.split) * len(labels))
+
+    keys = list(labels.keys())
+    random.shuffle(keys)
+
+    train_labels = {k: labels[k] for k in keys[:num_train]}
+    val_labels = {k: labels[k] for k in keys[num_train:]}
+
+    return train_labels, val_labels
+
+
+def update_labels(
+    args,
+    labels: dict[str, dict],
+    train_labels: dict[str, dict],
+    val_labels: dict[str, dict],
+) -> tuple[dict[str, dict], dict[str, dict]]:
+    new_keys = [k for k in labels if k not in train_labels and k not in val_labels]
+    random.shuffle(new_keys)
+
+    idx_split = int((1 - args.split) * len(new_keys))
+
+    new_train = {k: labels[k] for k in new_keys[:idx_split]}
+    new_train.update(
+        {k: labels[k] for k in labels if k in train_labels}
+    )  # move still-existing keys to new version (ignore deleted ones)
+
+    new_val = {k: labels[k] for k in new_keys[idx_split:]}
+    new_val.update({k: labels[k] for k in labels if k in val_labels})
+
+    return new_train, new_val
 
 
 def parse_args():
@@ -119,6 +166,12 @@ def parse_args():
         "--lr",
         type=float,
         default=0.002,
+    )
+    parser.add_argument(
+        "--resume-path",
+        dest="resume_path",
+        type=Path,
+        default=None,
     )
     parser.add_argument(
         "--split",

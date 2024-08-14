@@ -148,7 +148,7 @@ def train_recognition(args):
     model = recognition.__dict__[args.arch](pretrained=args.pretrained, vocab=vocab)
 
     # Resume weights
-    if isinstance(args.resume, str):
+    if isinstance(args.resume, Path):
         print(f"Resuming {args.resume}")
         checkpoint = torch.load(args.resume, map_location="cpu")
         model.load_state_dict(checkpoint)
