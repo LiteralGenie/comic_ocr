@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+from functools import cached_property
 from pathlib import Path
 
 from PIL import Image, ImageFont
@@ -10,6 +12,52 @@ from lib.generate_panels import generate_panels
 from lib.generate_text import InvalidFontFile, generate_texts
 from lib.misc_utils import Bbox
 from lib.render_page import RenderContext
+
+
+@dataclass
+class OcrMatch:
+    bbox: Bbox
+    confidence: float
+    value: str
+
+    @cached_property
+    def width(self):
+        return self.bbox[3] - self.bbox[1]
+
+    @cached_property
+    def height(self):
+        return self.bbox[2] - self.bbox[0]
+
+    @cached_property
+    def center(self):
+        cx = self.bbox[1] + self.width / 2
+        cy = self.bbox[0] + self.height / 2
+        return cx, cy
+
+
+@dataclass
+class StitchedWord:
+    matches: list[OcrMatch]
+
+    @cached_property
+    def value(self):
+        ms = self.matches.copy()
+        ms.sort(key=lambda m: m.center[0])
+
+        value = "".join(m.value for m in ms)
+        return value
+
+    @cached_property
+    def confidence(self):
+        return sum([m.confidence for m in self.matches]) / len(self.matches)
+
+    @cached_property
+    def bbox(self):
+        x1 = min(m.bbox[1] for m in self.matches)
+        x2 = max(m.bbox[3] for m in self.matches)
+        y1 = min(m.bbox[0] for m in self.matches)
+        y2 = max(m.bbox[2] for m in self.matches)
+        return (y1, x1, y2, x2)
 
 
 def make_context(
@@ -79,7 +127,7 @@ def eval_window(
 
     output: Document = model([crop_data])
 
-    matches: list[dict] = []
+    matches: list[OcrMatch] = []
     for page in output.pages:
         for block in page.blocks:
             for ln in block.lines:
@@ -106,10 +154,10 @@ def eval_window(
                     )
 
                     matches.append(
-                        dict(
-                            value=w.value,
-                            confidence=w.confidence,
+                        OcrMatch(
                             bbox=bbox,
+                            confidence=w.confidence,
+                            value=w.value,
                         )
                     )
 
@@ -209,3 +257,73 @@ def _is_contained(bbox: Bbox, xy: tuple[float, float]):
         return False
 
     return True
+
+
+def stitch_words(
+    matches: list[OcrMatch],
+    max_center_dy=0.6,
+    max_center_dx=1.2,
+) -> list[StitchedWord]:
+    """
+    Pick arbitrary match
+    Same word matches should be within match width
+    Same sentence matches should be within match height
+    """
+
+    words = []
+
+    rem = matches.copy()
+    while rem:
+        base = rem.pop()
+        parts = [base]
+
+        while True:
+            x1 = min(m.bbox[1] for m in parts)
+            x2 = max(m.bbox[3] for m in parts)
+            y1 = min(m.bbox[0] for m in parts)
+            y2 = max(m.bbox[2] for m in parts)
+            bbox = (y1, x1, y2, x2)
+
+            to_add = []
+            for idx, m in enumerate(rem):
+                dy = abs(base.center[1] - m.center[1])
+                if dy > base.height * max_center_dy:
+                    continue
+
+                # has_overlap = _any_between(bbox[1], bbox[3], [m.bbox[1], m.bbox[3]])
+                # if has_overlap:
+                #     to_add.append(idx)
+                #     continue
+
+                dx = abs(base.center[0] - m.center[0])
+                if dx <= base.width * max_center_dx:
+                    to_add.append(idx)
+                    continue
+
+                # dx = min(
+                #     abs(bbox[1] - m.bbox[3]),
+                #     abs(bbox[3] - m.bbox[1]),
+                # )
+                # if dx < base.width * max_edge_dx:
+                #     to_add.append(idx)
+                #     continue
+
+            if not to_add:
+                break
+
+            for idx in to_add:
+                parts.append(rem[idx])
+
+            rem = [m for idx, m in enumerate(rem) if idx not in to_add]
+
+        words.append(StitchedWord(parts))
+
+    return words
+
+
+def _between(start: float, end: float, x: float):
+    return x >= start and x <= end
+
+
+def _any_between(start: float, end: float, xs: list[float]):
+    return any(_between(start, end, x) for x in xs)

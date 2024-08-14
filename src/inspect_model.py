@@ -7,7 +7,13 @@ from doctr.models import ocr_predictor, db_resnet50, parseq
 from tqdm import tqdm
 
 from lib.constants import KOREAN_ALPHABET
-from lib.label_utils import calc_windows, eval_window
+from lib.label_utils import (
+    OcrMatch,
+    StitchedWord,
+    calc_windows,
+    eval_window,
+    stitch_words,
+)
 from lib.misc_utils import Bbox
 
 TEST_DIR = Path(sys.argv[1])
@@ -45,7 +51,8 @@ def main():
 
     for fp in fp_tests:
         result = _eval(predictor, fp, font, CROP_SIZE, MARGIN_SIZE)
-        result["preview"].save(f"eval_{fp.stem}.png")
+        result["char_preview"].save(f"{fp.stem}_char.png")
+        result["word_preview"].save(f"{fp.stem}_word.png")
 
 
 def _eval(
@@ -61,7 +68,7 @@ def _eval(
 
     pbar = tqdm(desc=fp.stem, total=len(windows))
 
-    matches = []
+    matches: list[OcrMatch] = []
     for w in windows:
         r = eval_window(model, im, w, MIN_CONFIDENCE)
 
@@ -69,16 +76,33 @@ def _eval(
 
         matches.extend(r["matches"])
 
-    matches.sort(key=lambda m: m["confidence"])
+    matches.sort(key=lambda m: m.confidence)
+    char_preview = _draw_chars(matches, im.copy(), font)
 
+    words = stitch_words(matches)
+    word_preview = _draw_words(words, im.copy(), font)
+
+    return dict(
+        im=im,
+        char_preview=char_preview,
+        word_preview=word_preview,
+        matches=matches,
+    )
+
+
+def _draw_chars(
+    matches: list[OcrMatch],
+    im: Image.Image,
+    font: ImageFont.FreeTypeFont,
+):
     overlay = Image.new("RGBA", im.size)
     draw = ImageDraw.Draw(overlay)
     for m in matches:
-        a = int(m["confidence"] * 255)
+        a = int(m.confidence * 255)
 
-        width = round(m["confidence"] * 5)
+        width = round(m.confidence * 5)
 
-        y1, x1, y2, x2 = m["bbox"]
+        y1, x1, y2, x2 = m.bbox
 
         draw.rectangle(
             (x1, y1, x2, y2),
@@ -88,19 +112,44 @@ def _eval(
 
         draw.text(
             (x1, y1 + LABEL_OFFSET_Y),
-            m["value"],
+            m.value,
             font=font,
             fill=(0, 255, 0, a),
         )
 
-    preview_im = im.copy()
-    preview_im.paste(overlay, (0, 0), overlay)
+    im.paste(overlay, (0, 0), overlay)
+    return im
 
-    return dict(
-        im=im,
-        preview=preview_im,
-        matches=matches,
-    )
+
+def _draw_words(
+    words: list[StitchedWord],
+    im: Image.Image,
+    font: ImageFont.FreeTypeFont,
+):
+    overlay = Image.new("RGBA", im.size)
+    draw = ImageDraw.Draw(overlay)
+    for w in words:
+        a = int(w.confidence * 255)
+
+        width = round(w.confidence * 5)
+
+        y1, x1, y2, x2 = w.bbox
+
+        draw.rectangle(
+            (x1, y1, x2, y2),
+            outline=(255, 0, 0, a),
+            width=width,
+        )
+
+        draw.text(
+            (x1, y1 + LABEL_OFFSET_Y),
+            w.value,
+            font=font,
+            fill=(0, 255, 0, a),
+        )
+
+    im.paste(overlay, (0, 0), overlay)
+    return im
 
 
 main()
