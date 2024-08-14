@@ -381,11 +381,14 @@ def train_detection(args):
             amp=args.amp,
         )
         if val_loss < min_loss:
+            file_name = f"{exp_name}_{val_loss:.6}_{recall:.2}_{precision:.2}.pt"
+
             print(
-                f"Validation loss decreased {min_loss:.6} --> {val_loss:.6}: saving state to {exp_name}.pt..."
+                f"Validation loss decreased {min_loss:.6} --> {val_loss:.6}: saving state to {file_name}..."
             )
             torch.save(
-                model.state_dict(), os.path.join(args.save_path, f"{exp_name}.pt")
+                model.state_dict(),
+                os.path.join(args.save_path, file_name),
             )
             min_loss = val_loss
         if args.save_interval_epoch:
