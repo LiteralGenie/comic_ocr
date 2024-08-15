@@ -21,6 +21,10 @@ from pathlib import Path
 import numpy as np
 import torch
 import wandb
+from doctr import transforms as T
+from doctr.datasets import VOCABS, RecognitionDataset, WordGenerator
+from doctr.models import login_to_hub, push_to_hf_hub, recognition
+from doctr.utils.metrics import TextMatch
 from torch.optim.lr_scheduler import CosineAnnealingLR, MultiplicativeLR, OneCycleLR
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
 from torchvision.transforms.v2 import (
@@ -33,10 +37,6 @@ from torchvision.transforms.v2 import (
 )
 from tqdm.auto import tqdm
 
-from doctr import transforms as T
-from doctr.datasets import VOCABS, WordGenerator, RecognitionDataset
-from doctr.models import login_to_hub, push_to_hf_hub, recognition
-from doctr.utils.metrics import TextMatch
 from lib.doctr_utils import (
     EarlyStopper,
     fit_one_epoch,
@@ -95,12 +95,12 @@ def train_recognition(args):
     # Load val data generator
     st = time.time()
     if isinstance(args.dataset_path, str):
-        with open(os.path.join(args.dataset_path, "val_labels.json"), "rb") as f:
+        with open(args.val_labels_path, "rb") as f:
             val_hash = hashlib.sha256(f.read()).hexdigest()
 
         val_set = RecognitionDataset(
             img_folder=args.dataset_path,
-            labels_path=os.path.join(args.dataset_path, "val_labels.json"),
+            labels_path=args.val_labels_path,
             img_transforms=T.Resize(
                 (args.input_size, 4 * args.input_size), preserve_aspect_ratio=True
             ),
@@ -190,18 +190,12 @@ def train_recognition(args):
 
     if isinstance(args.dataset_path, str):
         # Load train data generator
-        base_path = Path(args.dataset_path)
-        parts = (
-            [base_path]
-            if base_path.joinpath("train_labels.json").is_file()
-            else [base_path.joinpath(sub) for sub in os.listdir(base_path)]
-        )
-        with open(parts[0].joinpath("train_labels.json"), "rb") as f:
+        with open(args.train_labels_path, "rb") as f:
             train_hash = hashlib.sha256(f.read()).hexdigest()
 
         train_set = RecognitionDataset(
             args.dataset_path,
-            parts[0].joinpath("train_labels.json"),
+            args.train_labels_path,
             img_transforms=Compose(
                 [
                     T.Resize(
@@ -219,13 +213,6 @@ def train_recognition(args):
                 ]
             ),
         )
-        if len(parts) > 1:
-            for subfolder in parts[1:]:
-                train_set.merge_dataset(
-                    RecognitionDataset(
-                        args.dataset_path, subfolder.joinpath("train_labels.json")
-                    )
-                )
     else:
         train_hash = None
         # Load synthetic data generator

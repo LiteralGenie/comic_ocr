@@ -49,7 +49,7 @@ def det_insertion_scan(cfg: Config, fp_import: Path):
     if not to_add:
         return
 
-    tmp = input(f"Insert {len(to_add)} / {len(labels)} label rows (y)? ")
+    tmp = input(f"Import {len(to_add)} label rows (y)? ")
     if tmp != "y":
         print("Quitter.")
         return
@@ -107,14 +107,14 @@ def reco_insertion_scan(cfg: Config, fp_import: Path):
     if not to_add:
         return
 
-    tmp = input(f"Insert {len(to_add)} / {len(labels)} label rows (y)? ")
+    tmp = input(f"Import {len(to_add)} label rows (y)? ")
     if tmp != "y":
         print("Quitter.")
         return
 
     for k in to_add:
         db.execute(
-            """INSERT INTO labels (id, data) VALUES (?, ?)""",
+            """INSERT INTO labels (id, label) VALUES (?, ?)""",
             [k, labels[k]],
         )
 
@@ -124,13 +124,19 @@ def reco_insertion_scan(cfg: Config, fp_import: Path):
 def run(args):
     config = Config.load_toml(args.config_file)
 
+    if (fp_import := getattr(args, "import")) and not fp_import.exists():
+        raise Exception(f"Database to import from does not exist: {fp_import}")
+
     if args.type in ["detection", "det"]:
         det_deletion_scan(config)
 
         if fp := getattr(args, "import"):
             det_insertion_scan(config, fp)
     else:
-        pass
+        reco_deletion_scan(config)
+
+        if fp := getattr(args, "import"):
+            reco_insertion_scan(config, fp)
 
 
 def parse_args():
