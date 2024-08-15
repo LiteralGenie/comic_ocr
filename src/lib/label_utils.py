@@ -1,16 +1,17 @@
+import sqlite3
 from dataclasses import dataclass
 from functools import cached_property
 from itertools import accumulate, islice
 from pathlib import Path
-import sqlite3
 
+import numpy as np
 from datasets import load_dataset
-from PIL import Image, ImageFont
 from doctr.datasets import VOCABS
 from doctr.io import Document
 from doctr.models.predictor import OCRPredictor
-import numpy as np
+from PIL import Image, ImageFont
 from tqdm import tqdm
+
 from lib.constants import HANGUL_SYLLABLES, KOREAN_ALPHABET
 from lib.generate_bubbles import generate_bubbles
 from lib.generate_panels import generate_panels
@@ -334,7 +335,7 @@ def stitch_words(
     return words
 
 
-def load_vocab(vocab_file: Path, max_freq_frac=0.01):
+def load_vocab(vocab_file: Path, max_freq_frac=0.0003):
     db = sqlite3.connect(vocab_file)
     db.row_factory = sqlite3.Row
 

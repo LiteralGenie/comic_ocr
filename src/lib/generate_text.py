@@ -1,14 +1,14 @@
+import random
 from bisect import bisect
 from dataclasses import dataclass
 from pathlib import Path
 from random import randint
-import random
 from uuid import uuid4
 
 import cv2
-from cv2.typing import MatLike
-from PIL import ImageFont, ImageDraw, Image
 import numpy as np
+from cv2.typing import MatLike
+from PIL import Image, ImageDraw, ImageFont
 
 from lib.generate_bubbles import Bubble
 from lib.misc_utils import Bbox, dilate
@@ -35,13 +35,13 @@ def generate_texts(
     font_map: dict[str, Path],
     vocab: list[str],
     vocab_weight_acc: list[int],
-    max_tries=1000,
+    max_tries=500,
     min_font_size=20,
     max_font_size=50,
     min_angle=-20,
     max_angle=20,
     max_bbox_dilation=0,
-    mask_dilation=4,
+    mask_dilation=2,
 ):
     mask = np.zeros((bubble.height, bubble.width, 3), np.uint8)
     mask.fill(255)

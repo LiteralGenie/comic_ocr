@@ -1,10 +1,11 @@
 import argparse
 from itertools import chain
 from pathlib import Path
-from PIL import Image, ImageDraw, ImageFont
-from doctr.models.predictor import OCRPredictor
+
 import torch
-from doctr.models import ocr_predictor, db_resnet50, parseq
+from doctr.models import db_resnet50, ocr_predictor, parseq
+from doctr.models.predictor import OCRPredictor
+from PIL import Image, ImageDraw, ImageFont
 from tqdm import tqdm
 
 from lib.config import Config
@@ -19,12 +20,12 @@ from lib.label_utils import (
 
 
 def run(args):
-    config = Config.load_toml(args.config_file)
-    config.debug_dir.mkdir(parents=True, exist_ok=True)
+    cfg = Config.load_toml(args.config_file)
+    cfg.debug_dir.mkdir(parents=True, exist_ok=True)
 
     det_model = db_resnet50(pretrained=False, pretrained_backbone=False)
     det_params = torch.load(
-        config.det_model_dir / args.det_weights,
+        cfg.det_model_dir / args.det_weights,
         map_location="cpu",
     )
     det_model.load_state_dict(det_params)
@@ -35,7 +36,7 @@ def run(args):
         pretrained_backbone=False,
     )
     reco_params = torch.load(
-        config.reco_model_dir / args.reco_weights,
+        cfg.reco_model_dir / args.reco_weights,
         map_location="cpu",
     )
     reco_model.load_state_dict(reco_params)
@@ -55,8 +56,8 @@ def run(args):
     if not font_file:
         font_file = next(
             chain(
-                config.font_dir.glob("**/*.otf"),
-                config.font_dir.glob("**/*.ttf"),
+                cfg.font_dir.glob("**/*.otf"),
+                cfg.font_dir.glob("**/*.ttf"),
             )
         )
     font = ImageFont.truetype(font_file, args.font_size)
@@ -66,12 +67,12 @@ def run(args):
             predictor,
             fp,
             font,
-            config.det_input_size,
+            cfg.det_input_size,
             args.margin,
             args.min_confidence,
             args.label_offset_y,
         )
-        result["char_preview"].save(config.debug_dir / f"{fp.stem}_char.png")
+        result["char_preview"].save(cfg.debug_dir / f"{fp.stem}_char.png")
         # result["word_preview"].save(config.debug_dir / f"{fp.stem}_word.png")
 
 

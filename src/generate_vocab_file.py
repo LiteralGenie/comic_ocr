@@ -1,15 +1,14 @@
 import argparse
-from multiprocessing import Pool
-from pathlib import Path
 import re
 import sqlite3
+from multiprocessing import Pool
+from pathlib import Path
 from typing import Callable, Iterable
 
 from datasets import load_dataset
 from doctr.datasets import VOCABS
 from tqdm import tqdm
-from doctr.datasets import VOCABS
-from tqdm import tqdm
+
 from lib.config import Config
 from lib.constants import HANGUL_SYLLABLES, KOREAN_ALPHABET
 
@@ -17,7 +16,7 @@ from lib.constants import HANGUL_SYLLABLES, KOREAN_ALPHABET
 
 
 def run(args):
-    config = Config.load_toml(args.config_file)
+    cfg = Config.load_toml(args.config_file)
 
     raw_words = [
         *load_ds(
@@ -69,7 +68,7 @@ def run(args):
         f"Generated vocab with {len(vocab):,} words occurring {sum(vocab.values()):,} times"
     )
 
-    insert_vocab(config, vocab)
+    insert_vocab(cfg, vocab)
 
 
 def parse_args():
