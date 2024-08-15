@@ -14,7 +14,6 @@ from lib.label_utils import (
     eval_window,
     stitch_words,
 )
-from lib.misc_utils import Bbox
 
 TEST_DIR = Path(sys.argv[1])
 DET_WEIGHTS = Path(sys.argv[2])

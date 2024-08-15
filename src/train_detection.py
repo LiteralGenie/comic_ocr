@@ -5,6 +5,7 @@ from pathlib import Path
 import random
 import sqlite3
 
+from lib.config import Config
 from lib.detection import train_detection
 
 """
@@ -18,9 +19,10 @@ as mentioned here
 
 
 def run(args):
-    args.model_dir.mkdir(exist_ok=True)
+    config = Config.load_toml(args.config_file)
+    config.det_model_dir.mkdir(parents=True, exist_ok=True)
 
-    db = sqlite3.connect(args.dataset_dir / "det_labels.sqlite")
+    db = sqlite3.connect(config.det_dataset_dir / "_det_labels.sqlite")
     db.row_factory = sqlite3.Row
 
     labels = {
@@ -28,8 +30,8 @@ def run(args):
         for r in db.execute("SELECT id, data FROM labels")
     }
 
-    fp_train = args.dataset_dir / "train_labels.json"
-    fp_val = args.dataset_dir / "val_labels.json"
+    fp_train = config.det_dataset_dir / "_train_labels.json"
+    fp_val = config.det_dataset_dir / "_val_labels.json"
 
     if args.resume_path:
         print("Resuming from", args.resume_path)
@@ -61,10 +63,12 @@ def run(args):
 
     train_detection(
         Namespace(
-            dataset_path=str(args.dataset_dir),
-            save_path=str(args.model_dir),
+            dataset_path=str(config.det_dataset_dir),
+            save_path=str(config.det_model_dir),
+            train_labels_path=str(fp_train),
+            val_labels_path=str(fp_val),
             #
-            arch=args.arch,
+            arch=config.det_arch,
             pretrained=True,
             freeze_backbone=False,
             #
@@ -136,20 +140,9 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        "dataset_dir",
+        "config_file",
         type=Path,
-        help="path to files created by generate_detection_dataset.py",
-    )
-    parser.add_argument(
-        "model_dir",
-        type=Path,
-        help="model weights will be saved to this folder",
-    )
-    parser.add_argument(
-        "--arch",
-        type=str,
-        default="db_resnet50",
-        help="https://mindee.github.io/doctr/modules/models.html",
+        help="",
     )
     parser.add_argument(
         "--batch-size",

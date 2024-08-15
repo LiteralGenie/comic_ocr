@@ -103,7 +103,7 @@ def train_detection(args):
     st = time.time()
     val_set = DetectionDataset(
         img_folder=args.dataset_path,
-        label_path=os.path.join(args.dataset_path, "val_labels.json"),
+        label_path=args.val_labels_path,
         sample_transforms=T.SampleCompose(
             (
                 [
@@ -147,7 +147,7 @@ def train_detection(args):
         f"Validation set loaded in {time.time() - st:.4}s ({len(val_set)} samples in "
         f"{len(val_loader)} batches)"
     )
-    with open(os.path.join(args.dataset_path, "val_labels.json"), "rb") as f:
+    with open(args.val_labels_path, "rb") as f:
         val_hash = hashlib.sha256(f.read()).hexdigest()
 
     batch_transforms = Normalize(mean=(0.798, 0.785, 0.772), std=(0.264, 0.2749, 0.287))
@@ -275,7 +275,7 @@ def train_detection(args):
     # Load both train and val data generators
     train_set = DetectionDataset(
         img_folder=args.dataset_path,
-        label_path=os.path.join(args.dataset_path, "train_labels.json"),
+        label_path=args.train_labels_path,
         img_transforms=img_transforms,
         sample_transforms=sample_transforms,
         use_polygons=args.rotation,
@@ -294,7 +294,7 @@ def train_detection(args):
         f"Train set loaded in {time.time() - st:.4}s ({len(train_set)} samples in "
         f"{len(train_loader)} batches)"
     )
-    with open(os.path.join(args.dataset_path, "train_labels.json"), "rb") as f:
+    with open(args.train_labels_path, "rb") as f:
         train_hash = hashlib.sha256(f.read()).hexdigest()
 
     if args.show_samples:
