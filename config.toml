@@ -1,0 +1,12 @@
+debug_dir = "./data/debug/"
+font_dir = "./assets/fonts/"
+image_dir = "./assets/images"
+vocab_file = "./data/vocab.sqlite"
+
+det_arch = "db_resnet50"
+det_dataset_dir = "./data/detection"
+det_model_dir = "./data/models"
+
+reco_arch = "parseq"
+reco_dataset_dir = "./data/recognition"
+reco_model_dir = "./data/models"

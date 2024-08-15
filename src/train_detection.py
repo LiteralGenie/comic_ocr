@@ -142,7 +142,6 @@ def parse_args():
     parser.add_argument(
         "config_file",
         type=Path,
-        help="",
     )
     parser.add_argument(
         "--batch-size",

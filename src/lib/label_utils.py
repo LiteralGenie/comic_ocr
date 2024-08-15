@@ -127,42 +127,6 @@ def _is_valid_font(fp: Path) -> bool:
         return False
 
 
-def build_kr_vocab(
-    max_samples=100_000,
-    latin_weight_frac=0.0001,
-    hangul_weight_frac=0.000001,
-):
-    ds = load_dataset(
-        "sepidmnorozy/Korean_sentiment",
-        split="train",
-        streaming=True,
-    )
-
-    vocab = dict()
-
-    is_valid = lambda chars: all(c in KOREAN_ALPHABET for c in chars)
-    pbar = tqdm(
-        islice(iter(ds), 0, max_samples),
-        desc="Loading KR vocab...",
-    )
-    for x in pbar:
-        words = x["text"].split(" ")
-        for w in words:
-            if is_valid(w):
-                vocab.setdefault(w, 0)
-                vocab[w] += 1
-
-    for char in VOCABS["digits"] + VOCABS["ascii_letters"]:
-        vocab[char] = max(1, int(latin_weight_frac * len(vocab)))
-    for char in HANGUL_SYLLABLES:
-        vocab[char] = max(1, int(hangul_weight_frac * len(vocab)))
-
-    print(
-        f"Loaded vocab with {len(vocab):,} words occurring {sum(vocab.values()):,} times"
-    )
-    return vocab
-
-
 def eval_window(
     model: OCRPredictor,
     im: Image.Image,

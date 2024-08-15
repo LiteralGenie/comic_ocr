@@ -5,47 +5,14 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "test.py",
+            "name": "generate_vocab_file.py",
             "type": "debugpy",
             "request": "launch",
-            "program": "src/test.py",
+            "program": "src/generate_vocab_file.py",
             "console": "integratedTerminal",
             "args": [
-                "${workspaceFolder}/assets/fonts",
-                "${workspaceFolder}/assets/images"
+                "config.toml"
             ]
-        },
-        {
-            "name": "generate_detection_dataset.py",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "src/generate_detection_dataset.py",
-            "console": "integratedTerminal",
-            "args": "${command:pickArgs}"
-        },
-        {
-            "name": "generate_recognition_dataset.py",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "src/generate_recognition_dataset.py",
-            "console": "integratedTerminal",
-            "args": "${command:pickArgs}"
-        },
-        {
-            "name": "train_detection.py",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "src/train_detection.py",
-            "console": "integratedTerminal",
-            "args": "${command:pickArgs}"
-        },
-        {
-            "name": "train_recognition.py",
-            "type": "debugpy",
-            "request": "launch",
-            "program": "src/train_recognition.py",
-            "console": "integratedTerminal",
-            "args": "${command:pickArgs}"
-        },
+        }
     ]
 }
