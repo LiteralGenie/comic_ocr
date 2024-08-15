@@ -10,7 +10,7 @@ from PIL import Image
 import numpy as np
 from tqdm import tqdm
 
-from lib.label_utils import make_context
+from lib.label_utils import build_kr_vocab, make_context
 from lib.render_page import (
     RenderContext,
     build_render_info,
@@ -26,12 +26,15 @@ OUT_DIR.mkdir(exist_ok=True)
 
 NUM_WORKERS = 4
 
+WORKER_CTX = dict()
+
 
 def main():
     db = init_db()
 
-    count = 0
+    WORKER_CTX["vocab"] = build_kr_vocab()
 
+    count = 0
     with multiprocessing.Pool(NUM_WORKERS) as pool:
         pbar = tqdm(total=NUM_SAMPLES)
         for d in pool.imap_unordered(make_detection_sample, range(NUM_SAMPLES)):
@@ -70,7 +73,7 @@ def init_db():
 
 def make_detection_sample(_) -> dict | None:
     try:
-        ctx = make_context(FONT_DIR, IMAGE_DIR)
+        ctx = make_context(FONT_DIR, IMAGE_DIR, WORKER_CTX["vocab"])
         info = build_render_info(ctx)
 
         sample = render_page(ctx, info)

@@ -454,21 +454,28 @@ def _render_text(
     return canvas
 
 
-def dump_dataclass(instance) -> dict:
+def dump_dataclass(instance, exclude: list[str] | None = None) -> dict:
+    exclude = exclude or []
+
     data = dict()
 
     for f in fields(instance):
+        if f.name in exclude:
+            continue
+
         val = getattr(instance, f.name)
 
         if is_dataclass(val):
-            data[f.name] = dump_dataclass(val)
+            data[f.name] = dump_dataclass(val, exclude)
         else:
-            data[f.name] = _dump(val)
+            data[f.name] = _dump(val, exclude)
 
     return data
 
 
-def _dump(x):
+def _dump(x, exclude: list[str] | None):
+    exclude = exclude or []
+
     if isinstance(x, (str, int, float, bool)):
         return x
     elif isinstance(x, (np.int64, np.int32, np.int16, np.int8)):  # type: ignore
@@ -476,13 +483,13 @@ def _dump(x):
     elif isinstance(x, Path):
         return str(x)
     elif isinstance(x, list):
-        return [_dump(v) for v in x]
+        return [_dump(v, exclude) for v in x]
     elif isinstance(x, tuple):
-        return tuple(_dump(v) for v in x)
+        return tuple(_dump(v, exclude) for v in x)
     elif isinstance(x, dict):
-        return {k: _dump(v) for k, v in x.items()}
+        return {k: _dump(v, exclude) for k, v in x.items() if k not in exclude}
     elif is_dataclass(x):
-        return dump_dataclass(x)
+        return dump_dataclass(x, exclude)
     elif x is None:
         return None
     else:
@@ -490,13 +497,7 @@ def _dump(x):
 
 
 def _guess_contrast(a: Rgba, b: Rgba) -> float:
-    la = _calc_luminance(a[:3]) * (a[3] / 255)
-    lb = _calc_luminance(b[:3]) * (b[3] / 255)
-
-    brightest = max(la, lb)
-    darkest = min(la, lb)
-
-    return (brightest + 0.05) / (darkest + 0.05)
+    return a[3] * b[3] * _calc_constrast(a[:3], b[:3])
 
 
 def _calc_constrast(a: tuple[int, int, int], b: tuple[int, int, int]) -> float:

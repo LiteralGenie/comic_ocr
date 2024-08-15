@@ -7,7 +7,7 @@ import traceback
 from PIL import Image
 from tqdm import tqdm
 
-from lib.label_utils import make_context
+from lib.label_utils import build_kr_vocab, make_context
 from lib.render_page import (
     RenderContext,
     build_render_info,
@@ -23,12 +23,15 @@ OUT_DIR.mkdir(exist_ok=True)
 
 NUM_WORKERS = 4
 
+WORKER_CTX = dict()
+
 
 def main():
     db = init_db()
 
-    count = 0
+    WORKER_CTX["vocab"] = build_kr_vocab()
 
+    count = 0
     try:
         with multiprocessing.Pool(NUM_WORKERS) as pool:
             pbar = tqdm(total=NUM_SAMPLES)
@@ -75,7 +78,12 @@ def init_db():
 
 def make_recognition_sample(_) -> dict | None:
     try:
-        ctx = make_context(FONT_DIR, IMAGE_DIR, text_max_bbox_dilation=5)
+        ctx = make_context(
+            FONT_DIR,
+            IMAGE_DIR,
+            WORKER_CTX["vocab"],
+            text_max_bbox_dilation=5,
+        )
         info = build_render_info(ctx)
 
         det_sample = render_page(ctx, info)

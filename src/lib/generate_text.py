@@ -1,3 +1,4 @@
+from bisect import bisect
 from dataclasses import dataclass
 from pathlib import Path
 from random import randint
@@ -32,14 +33,15 @@ class Text:
 def generate_texts(
     bubble: Bubble,
     font_map: dict[str, Path],
-    alphabet: list[str],
+    vocab: list[str],
+    vocab_weight_acc: list[int],
     max_tries=1000,
     min_font_size=20,
     max_font_size=50,
-    min_angle=-30,
-    max_angle=30,
+    min_angle=-20,
+    max_angle=20,
     max_bbox_dilation=0,
-    mask_dilation=1,
+    mask_dilation=4,
 ):
     mask = np.zeros((bubble.height, bubble.width, 3), np.uint8)
     mask.fill(255)
@@ -60,7 +62,9 @@ def generate_texts(
 
     texts: list[Text] = []
     for idx in range(max_tries):
-        letter = random.choice(alphabet)
+        word_idx = random.random() * vocab_weight_acc[-1]
+        word = vocab[bisect(vocab_weight_acc, word_idx)]
+
         font_size = randint(min_font_size, max_font_size)
         x = randint(0, bubble.width)
         y = randint(0, bubble.height)
@@ -72,7 +76,7 @@ def generate_texts(
             fp_font = font_map[bubble.font_file]
             font = ImageFont.truetype(fp_font, font_size)
             draw = ImageDraw.Draw(render)
-            draw.text((x + 1, y + 1), letter, font=font, fill=(255, 255, 255))
+            draw.text((x + 1, y + 1), word, font=font, fill=(255, 255, 255))
         except OSError:
             raise InvalidFontFile(fp_font)
 
@@ -124,7 +128,7 @@ def generate_texts(
             Text(
                 uuid4().hex,
                 bubble.id,
-                letter,
+                word,
                 (x + bubble.bbox[1], y + bubble.bbox[0]),
                 font_size,
                 bbox,

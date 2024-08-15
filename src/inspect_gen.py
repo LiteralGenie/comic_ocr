@@ -1,12 +1,13 @@
 import json
 from pathlib import Path
+import pickle
 from random import randint
 import sys
 
 from PIL import Image, ImageDraw, ImageFont
 import cv2
 import numpy as np
-from lib.label_utils import make_context
+from lib.label_utils import build_kr_vocab, make_context
 from lib.render_page import (
     RenderContext,
     dump_dataclass,
@@ -21,7 +22,16 @@ IMAGE_DIR = Path(sys.argv[2])
 
 
 def main():
-    ctx = make_context(FONT_DIR, IMAGE_DIR)
+    fp_vocab = Path("vocab.pkl")
+    if fp_vocab.exists():
+        with open(fp_vocab, "rb") as file:
+            vocab = pickle.load(file)
+    else:
+        vocab = build_kr_vocab()
+        with open(fp_vocab, "wb") as file:
+            pickle.dump(vocab, file)
+
+    ctx = make_context(FONT_DIR, IMAGE_DIR, vocab)
     Path("./ctx.json").write_text(
         json.dumps(
             dump_dataclass(ctx),

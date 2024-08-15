@@ -1,12 +1,16 @@
 from dataclasses import dataclass
 from functools import cached_property
+from itertools import accumulate, islice
 from pathlib import Path
 
+from datasets import load_dataset
 from PIL import Image, ImageFont
+from doctr.datasets import VOCABS
 from doctr.io import Document
 from doctr.models.predictor import OCRPredictor
 import numpy as np
-from lib.constants import KOREAN_ALPHABET
+from tqdm import tqdm
+from lib.constants import HANGUL_SYLLABLES, KOREAN_ALPHABET
 from lib.generate_bubbles import generate_bubbles
 from lib.generate_panels import generate_panels
 from lib.generate_text import InvalidFontFile, generate_texts
@@ -63,6 +67,7 @@ class StitchedWord:
 def make_context(
     font_dir: Path,
     image_dir: Path,
+    vocab: dict[str, int],
     text_max_bbox_dilation=1,
 ):
     options = list(font_dir.glob("**/*.otf")) + list(font_dir.glob("**/*.ttf"))
@@ -75,6 +80,9 @@ def make_context(
     panels, wh = generate_panels()
     panel_map = {p.id: p for p in panels}
 
+    words, word_weights = zip(*vocab.items())
+    word_weight_acc = list(accumulate(word_weights))
+
     while True:
         bubble_map = {b.id: b for p in panels for b in generate_bubbles(p, font_map)}
 
@@ -85,10 +93,14 @@ def make_context(
                 for t in generate_texts(
                     b,
                     font_map,
-                    KOREAN_ALPHABET,
+                    words,
+                    word_weight_acc,
                     max_bbox_dilation=text_max_bbox_dilation,
                 )
             }
+
+            if len(text_map) == 0:
+                continue
 
             break
         except InvalidFontFile as e:
@@ -113,6 +125,42 @@ def _is_valid_font(fp: Path) -> bool:
         return True
     except:
         return False
+
+
+def build_kr_vocab(
+    max_samples=100_000,
+    latin_weight_frac=0.0001,
+    hangul_weight_frac=0.000001,
+):
+    ds = load_dataset(
+        "sepidmnorozy/Korean_sentiment",
+        split="train",
+        streaming=True,
+    )
+
+    vocab = dict()
+
+    is_valid = lambda chars: all(c in KOREAN_ALPHABET for c in chars)
+    pbar = tqdm(
+        islice(iter(ds), 0, max_samples),
+        desc="Loading KR vocab...",
+    )
+    for x in pbar:
+        words = x["text"].split(" ")
+        for w in words:
+            if is_valid(w):
+                vocab.setdefault(w, 0)
+                vocab[w] += 1
+
+    for char in VOCABS["digits"] + VOCABS["ascii_letters"]:
+        vocab[char] = max(1, int(latin_weight_frac * len(vocab)))
+    for char in HANGUL_SYLLABLES:
+        vocab[char] = max(1, int(hangul_weight_frac * len(vocab)))
+
+    print(
+        f"Loaded vocab with {len(vocab):,} words occurring {sum(vocab.values()):,} times"
+    )
+    return vocab
 
 
 def eval_window(
