@@ -343,6 +343,9 @@ def load_vocab(vocab_file: Path, max_freq_frac=0.01):
     max_freq = int(len(vocab) * max_freq_frac)
     vocab = {k: min(v, max_freq) for k, v in vocab.items()}
 
-    print("Limiting vocab frequency to", max_freq)
+    total_freq = sum(vocab.values())
+    print(
+        f"Limiting vocab frequency to {max_freq / total_freq:.3%} ({max_freq:,} / {total_freq:,})",
+    )
 
     return vocab
