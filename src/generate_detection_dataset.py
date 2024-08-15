@@ -1,8 +1,8 @@
+import argparse
 import hashlib
 import json
 import multiprocessing
 import sqlite3
-import sys
 from pathlib import Path
 import traceback
 
@@ -10,51 +10,69 @@ from PIL import Image
 import numpy as np
 from tqdm import tqdm
 
-from lib.label_utils import build_kr_vocab, make_context
+from lib.config import Config
+from lib.label_utils import load_vocab, make_context
 from lib.render_page import (
     RenderContext,
     build_render_info,
     render_page,
 )
 
-FONT_DIR = Path(sys.argv[1])
-IMAGE_DIR = Path(sys.argv[2])
-OUT_DIR = Path(sys.argv[3])
-NUM_SAMPLES = int(sys.argv[4])
-
-OUT_DIR.mkdir(exist_ok=True)
-
-NUM_WORKERS = 4
-
 WORKER_CTX = dict()
 
 
-def main():
-    db = init_db()
+def run(args):
+    config = Config.load_toml(args.config_file)
+    config.det_dataset_dir.mkdir(parents=True, exist_ok=True)
 
-    WORKER_CTX["vocab"] = build_kr_vocab()
+    db = init_db(config.det_dataset_dir)
+
+    WORKER_CTX["vocab"] = load_vocab(config.vocab_file)
+    WORKER_CTX["font_dir"] = config.font_dir
+    WORKER_CTX["image_dir"] = config.image_dir
 
     count = 0
-    with multiprocessing.Pool(NUM_WORKERS) as pool:
-        pbar = tqdm(total=NUM_SAMPLES)
-        for d in pool.imap_unordered(make_detection_sample, range(NUM_SAMPLES)):
+    with multiprocessing.Pool(args.workers) as pool:
+        pbar = tqdm(total=args.samples)
+        for d in pool.imap_unordered(make_detection_sample, range(args.samples)):
             if not d:
                 continue
 
             pbar.update()
 
             img_hash = d["detection"]["label"]["img_hash"]
-            fp_out = OUT_DIR / f"{img_hash}.png"
+            fp_out = config.det_dataset_dir / f"{img_hash}.png"
 
             d["detection"]["sample"].save(fp_out)
             insert_detection_label(db, d["detection"]["label"])
 
-            if count >= NUM_SAMPLES:
+            if count >= args.samples:
                 return
 
 
-def init_db():
-    db = sqlite3.connect(OUT_DIR / "det_labels.sqlite")
+def parse_args():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "config_file",
+        type=Path,
+    )
+    parser.add_argument(
+        "--samples",
+        type=int,
+        default=100_000,
+    )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=4,
+    )
+
+    return parser.parse_args()
+
+
+def init_db(fp_dir: Path):
+    db = sqlite3.connect(fp_dir / "_det_labels.sqlite")
     db.row_factory = sqlite3.Row
 
     db.execute(
@@ -73,7 +91,11 @@ def init_db():
 
 def make_detection_sample(_) -> dict | None:
     try:
-        ctx = make_context(FONT_DIR, IMAGE_DIR, WORKER_CTX["vocab"])
+        ctx = make_context(
+            WORKER_CTX["font_dir"],
+            WORKER_CTX["image_dir"],
+            WORKER_CTX["vocab"],
+        )
         info = build_render_info(ctx)
 
         sample = render_page(ctx, info)
@@ -144,4 +166,5 @@ def insert_detection_label(db: sqlite3.Connection, label: dict):
 
 
 if __name__ == "__main__":
-    main()
+    args = parse_args()
+    run(args)

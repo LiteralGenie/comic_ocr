@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from functools import cached_property
 from itertools import accumulate, islice
 from pathlib import Path
+import sqlite3
 
 from datasets import load_dataset
 from PIL import Image, ImageFont
@@ -333,9 +334,9 @@ def stitch_words(
     return words
 
 
-def _between(start: float, end: float, x: float):
-    return x >= start and x <= end
+def load_vocab(vocab_file: Path):
+    db = sqlite3.connect(vocab_file)
+    db.row_factory = sqlite3.Row
 
-
-def _any_between(start: float, end: float, xs: list[float]):
-    return any(_between(start, end, x) for x in xs)
+    vocab = {r["id"]: r["count"] for r in db.execute("SELECT id, count FROM vocab")}
+    return vocab

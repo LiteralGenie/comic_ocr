@@ -11,7 +11,7 @@ import numpy as np
 from lib.generate_bubbles import Bubble
 from lib.generate_panels import Panel
 from lib.generate_text import Text
-from lib.misc_utils import Bbox, rand_gauss
+from lib.misc_utils import Bbox
 
 Rgba: TypeAlias = tuple[int, int, int, int]
 
@@ -32,7 +32,7 @@ class RenderContext:
     max_panel_stroke_width: int = 5
     max_bubble_stroke_width: int = 10
     max_image_rotate: int = 45
-    min_text_opacity: int = 127
+    min_text_opacity: int = 180
     min_bubble_opacity: int = 127
     min_image_crop_frac: float = 0.2
     p_image_flip_x: float = 0.5

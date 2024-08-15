@@ -3,7 +3,7 @@ from multiprocessing import Pool
 from pathlib import Path
 import re
 import sqlite3
-from typing import Callable, Generator
+from typing import Callable, Iterable
 
 from datasets import load_dataset
 from doctr.datasets import VOCABS
@@ -11,7 +11,6 @@ from tqdm import tqdm
 from doctr.datasets import VOCABS
 from tqdm import tqdm
 from lib.config import Config
-from lib.constants import HANGUL_SYLLABLES
 from lib.constants import HANGUL_SYLLABLES, KOREAN_ALPHABET
 
 # @todo: pre-build cumdist
@@ -19,7 +18,6 @@ from lib.constants import HANGUL_SYLLABLES, KOREAN_ALPHABET
 
 def run(args):
     config = Config.load_toml(args.config_file)
-    config.vocab_file = Path("./tmp.sqlite")
 
     raw_words = [
         *load_ds(
@@ -138,7 +136,7 @@ def load_ds(
     ds_kwargs: dict,
     getter: Callable[[dict], dict[str, list[str]]],
     len_estimate: int | None = None,
-) -> Generator[str, None, None]:
+) -> Iterable[str]:
     ds = load_dataset(split="train", streaming=True, **ds_kwargs)
 
     ds_iter = tqdm(

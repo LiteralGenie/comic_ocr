@@ -20,7 +20,7 @@ as mentioned here
 
 def run(args):
     config = Config.load_toml(args.config_file)
-    config.det_model_dir.mkdir(parents=True, exist_ok=True)
+    config.det_dataset_dir.mkdir(parents=True, exist_ok=True)
 
     db = sqlite3.connect(config.det_dataset_dir / "_det_labels.sqlite")
     db.row_factory = sqlite3.Row
