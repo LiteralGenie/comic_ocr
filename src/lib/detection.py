@@ -384,7 +384,7 @@ def train_detection(args):
             file_name = f"{exp_name}_{val_loss:.6}_{recall:.2}_{precision:.2}.pt"
 
             print(
-                f"Validation loss decreased {min_loss:.6} --> {val_loss:.6}: saving state to {file_name}..."
+                f"Validation loss decreased {min_loss:.6} --> {val_loss:.6}: saving state to {file_name} ..."
             )
             torch.save(
                 model.state_dict(),

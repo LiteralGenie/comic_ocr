@@ -13,6 +13,7 @@ class Config:
 
     det_arch: str
     det_dataset_dir: Path
+    det_input_size: int
     det_model_dir: Path
 
     reco_arch: str

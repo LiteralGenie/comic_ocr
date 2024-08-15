@@ -5,6 +5,7 @@ vocab_file = "./data/vocab.sqlite"
 
 det_arch = "db_resnet50"
 det_dataset_dir = "./data/detection"
+det_input_size = 1024
 det_model_dir = "./data/models"
 
 reco_arch = "parseq"

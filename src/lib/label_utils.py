@@ -334,9 +334,15 @@ def stitch_words(
     return words
 
 
-def load_vocab(vocab_file: Path):
+def load_vocab(vocab_file: Path, max_freq_frac=0.01):
     db = sqlite3.connect(vocab_file)
     db.row_factory = sqlite3.Row
 
     vocab = {r["id"]: r["count"] for r in db.execute("SELECT id, count FROM vocab")}
+
+    max_freq = int(len(vocab) * max_freq_frac)
+    vocab = {k: min(v, max_freq) for k, v in vocab.items()}
+
+    print("Limiting vocab frequency to", max_freq)
+
     return vocab

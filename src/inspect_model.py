@@ -1,11 +1,13 @@
+import argparse
+from itertools import chain
 from pathlib import Path
-import sys
 from PIL import Image, ImageDraw, ImageFont
 from doctr.models.predictor import OCRPredictor
 import torch
 from doctr.models import ocr_predictor, db_resnet50, parseq
 from tqdm import tqdm
 
+from lib.config import Config
 from lib.constants import KOREAN_ALPHABET
 from lib.label_utils import (
     OcrMatch,
@@ -15,27 +17,27 @@ from lib.label_utils import (
     stitch_words,
 )
 
-TEST_DIR = Path(sys.argv[1])
-DET_WEIGHTS = Path(sys.argv[2])
-RECO_WEIGHTS = Path(sys.argv[3])
-FONT_FILE = Path(sys.argv[4])
 
-FONT_SIZE = 20
-LABEL_OFFSET_Y = -20
-MIN_CONFIDENCE = 0.25
-CROP_SIZE = 1024
-MARGIN_SIZE = 100
+def run(args):
+    config = Config.load_toml(args.config_file)
+    config.debug_dir.mkdir(parents=True, exist_ok=True)
 
-
-def main():
     det_model = db_resnet50(pretrained=False, pretrained_backbone=False)
-    det_params = torch.load(DET_WEIGHTS, map_location="cpu")
+    det_params = torch.load(
+        config.det_model_dir / args.det_weights,
+        map_location="cpu",
+    )
     det_model.load_state_dict(det_params)
 
     reco_model = parseq(
-        vocab=KOREAN_ALPHABET, pretrained=False, pretrained_backbone=False
+        vocab=KOREAN_ALPHABET,
+        pretrained=False,
+        pretrained_backbone=False,
     )
-    reco_params = torch.load(RECO_WEIGHTS, map_location="cpu")
+    reco_params = torch.load(
+        config.reco_model_dir / args.reco_weights,
+        map_location="cpu",
+    )
     reco_model.load_state_dict(reco_params)
 
     predictor = ocr_predictor(
@@ -44,14 +46,84 @@ def main():
         pretrained=False,
     ).cuda()
 
-    fp_tests = list(TEST_DIR.glob("**/*.png")) + list(TEST_DIR.glob("**/*.jpg"))
+    fp_tests = [
+        *args.test_dir.glob("**/*.png"),
+        *args.test_dir.glob("**/*.jpg"),
+    ]
 
-    font = ImageFont.truetype(FONT_FILE, FONT_SIZE)
+    font_file = args.font_file
+    if not font_file:
+        font_file = next(
+            chain(
+                config.font_dir.glob("**/*.otf"),
+                config.font_dir.glob("**/*.ttf"),
+            )
+        )
+    font = ImageFont.truetype(font_file, args.font_size)
 
     for fp in fp_tests:
-        result = _eval(predictor, fp, font, CROP_SIZE, MARGIN_SIZE)
-        result["char_preview"].save(f"{fp.stem}_char.png")
-        result["word_preview"].save(f"{fp.stem}_word.png")
+        result = _eval(
+            predictor,
+            fp,
+            font,
+            config.det_input_size,
+            args.margin,
+            args.min_confidence,
+            args.label_offset_y,
+        )
+        result["char_preview"].save(config.debug_dir / f"{fp.stem}_char.png")
+        # result["word_preview"].save(config.debug_dir / f"{fp.stem}_word.png")
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "config_file",
+        type=Path,
+    )
+    parser.add_argument(
+        "det_weights",
+        type=Path,
+        help="Filename of detection model weights. File should be located in config.det_model_dir",
+    )
+    parser.add_argument(
+        "reco_weights",
+        type=Path,
+        help="Filename of recognition model weights. File should be located in config.reco_model_dir",
+    )
+    parser.add_argument(
+        "test_dir",
+        type=Path,
+        help="Images to generate predictions for",
+    )
+    parser.add_argument(
+        "--font-file",
+        type=Path,
+    )
+    parser.add_argument(
+        "--font-size",
+        type=float,
+        default=20,
+    )
+    parser.add_argument(
+        "--label-offset-y",
+        type=int,
+        default=-20,
+    )
+    parser.add_argument(
+        "--min-confidence",
+        type=float,
+        default=0.25,
+    )
+    parser.add_argument(
+        "--margin",
+        type=int,
+        default=100,
+        help="Input images are sliced into overlapping windows according to margin size before being fed to the predictor.",
+    )
+
+    return parser.parse_args()
 
 
 def _eval(
@@ -60,6 +132,8 @@ def _eval(
     font: ImageFont.FreeTypeFont,
     crop_size: int,
     margin_size: int,
+    min_confidence: float,
+    label_offset_y: int,
 ) -> dict:
     im = Image.open(fp).convert("RGBA")
 
@@ -69,17 +143,27 @@ def _eval(
 
     matches: list[OcrMatch] = []
     for w in windows:
-        r = eval_window(model, im, w, MIN_CONFIDENCE)
+        r = eval_window(model, im, w, min_confidence)
 
         pbar.update()
 
         matches.extend(r["matches"])
 
     matches.sort(key=lambda m: m.confidence)
-    char_preview = _draw_chars(matches, im.copy(), font)
+    char_preview = _draw_chars(
+        matches,
+        im.copy(),
+        font,
+        label_offset_y,
+    )
 
     words = stitch_words(matches)
-    word_preview = _draw_words(words, im.copy(), font)
+    word_preview = _draw_words(
+        words,
+        im.copy(),
+        font,
+        label_offset_y,
+    )
 
     return dict(
         im=im,
@@ -93,6 +177,7 @@ def _draw_chars(
     matches: list[OcrMatch],
     im: Image.Image,
     font: ImageFont.FreeTypeFont,
+    label_offset_y: int,
 ):
     overlay = Image.new("RGBA", im.size)
     draw = ImageDraw.Draw(overlay)
@@ -110,7 +195,7 @@ def _draw_chars(
         )
 
         draw.text(
-            (x1, y1 + LABEL_OFFSET_Y),
+            (x1, y1 + label_offset_y),
             m.value,
             font=font,
             fill=(0, 255, 0, a),
@@ -124,6 +209,7 @@ def _draw_words(
     words: list[StitchedWord],
     im: Image.Image,
     font: ImageFont.FreeTypeFont,
+    label_offset_y: int,
 ):
     overlay = Image.new("RGBA", im.size)
     draw = ImageDraw.Draw(overlay)
@@ -141,7 +227,7 @@ def _draw_words(
         )
 
         draw.text(
-            (x1, y1 + LABEL_OFFSET_Y),
+            (x1, y1 + label_offset_y),
             w.value,
             font=font,
             fill=(0, 255, 0, a),
@@ -151,4 +237,6 @@ def _draw_words(
     return im
 
 
-main()
+if __name__ == "__main__":
+    args = parse_args()
+    run(args)

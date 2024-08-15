@@ -349,7 +349,7 @@ def train_recognition(args):
         )
         if val_loss < min_loss:
             print(
-                f"Validation loss decreased {min_loss:.6} --> {val_loss:.6}: saving state to {exp_name}.pt..."
+                f"Validation loss decreased {min_loss:.6} --> {val_loss:.6}: saving state to {exp_name}.pt ..."
             )
             torch.save(
                 model.state_dict(), os.path.join(args.save_path, f"{exp_name}.pt")

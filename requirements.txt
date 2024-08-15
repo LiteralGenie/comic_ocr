@@ -2,6 +2,7 @@ matplotlib
 opencv-python
 pillow
 python-doctr
+toml
 torch
 torchvision
 tqdm
