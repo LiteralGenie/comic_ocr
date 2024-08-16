@@ -176,6 +176,8 @@ def eval_window(
         for block in page.blocks:
             for ln in block.lines:
                 for w in ln.words:
+                    if not w.value:
+                        continue
                     if w.confidence < min_confidence:
                         continue
 

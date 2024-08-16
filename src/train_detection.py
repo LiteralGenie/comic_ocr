@@ -20,9 +20,9 @@ as mentioned here
 
 def run(args):
     cfg = Config.load_toml(args.config_file)
-    cfg.det_dataset_dir.mkdir(parents=True, exist_ok=True)
+    cfg.training.det_dataset_dir.mkdir(parents=True, exist_ok=True)
 
-    db = sqlite3.connect(cfg.det_dataset_dir / "_det_labels.sqlite")
+    db = sqlite3.connect(cfg.training.det_dataset_dir / "_det_labels.sqlite")
     db.row_factory = sqlite3.Row
 
     labels = {
@@ -30,8 +30,8 @@ def run(args):
         for r in db.execute("SELECT id, data FROM labels")
     }
 
-    fp_train = cfg.det_dataset_dir / "_train_labels.json"
-    fp_val = cfg.det_dataset_dir / "_val_labels.json"
+    fp_train = cfg.training.det_dataset_dir / "_train_labels.json"
+    fp_val = cfg.training.det_dataset_dir / "_val_labels.json"
 
     if args.resume_path:
         print("Resuming from", args.resume_path)
@@ -63,12 +63,12 @@ def run(args):
 
     train_detection(
         Namespace(
-            dataset_path=str(cfg.det_dataset_dir),
-            save_path=str(cfg.det_model_dir),
+            dataset_path=str(cfg.training.det_dataset_dir),
+            save_path=str(cfg.training.det_model_dir),
             train_labels_path=str(fp_train),
             val_labels_path=str(fp_val),
             #
-            arch=cfg.det_arch,
+            arch=cfg.training.det_arch,
             pretrained=True,
             freeze_backbone=False,
             #

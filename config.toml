@@ -1,4 +1,22 @@
 debug_dir = "./data/debug/"
+
+### General settings (the important ones)
+
+# Path to .pt files. Leave blank ("") to use default weights (not recommended)
+det_weights = ""
+reco_weights = ""
+
+det_arch = "db_resnet50"
+reco_arch = "parseq"
+
+# Input size for detector model
+det_input_size = 1024
+
+
+### Settings for model training / dataset generation
+
+[training]
+
 font_dir = "./assets/fonts/"
 image_dir = "./assets/images"
 vocab_file = "./data/vocab.sqlite"

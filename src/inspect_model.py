@@ -3,7 +3,8 @@ from itertools import chain
 from pathlib import Path
 
 import torch
-from doctr.models import db_resnet50, ocr_predictor, parseq
+from doctr import models
+from doctr.models import ocr_predictor
 from doctr.models.predictor import OCRPredictor
 from PIL import Image, ImageDraw, ImageFont
 from tqdm import tqdm
@@ -20,25 +21,30 @@ from lib.label_utils import (
     stitch_lines,
 )
 
+# @todo: avoid text / bbox collision by checking nearest bbox pos
+
 
 def run(args):
     cfg = Config.load_toml(args.config_file)
     cfg.debug_dir.mkdir(parents=True, exist_ok=True)
 
-    det_model = db_resnet50(pretrained=False, pretrained_backbone=False)
+    det_model = models.detection.__dict__[cfg.training.det_arch](
+        pretrained=False,
+        pretrained_backbone=False,
+    )
     det_params = torch.load(
-        cfg.det_model_dir / args.det_weights,
+        cfg.training.det_model_dir / args.det_weights,
         map_location="cpu",
     )
     det_model.load_state_dict(det_params)
 
-    reco_model = parseq(
+    reco_model = models.recognition.__dict__[cfg.training.reco_arch](
         vocab=KOREAN_ALPHABET,
         pretrained=False,
         pretrained_backbone=False,
     )
     reco_params = torch.load(
-        cfg.reco_model_dir / args.reco_weights,
+        cfg.training.reco_model_dir / args.reco_weights,
         map_location="cpu",
     )
     reco_model.load_state_dict(reco_params)
@@ -49,27 +55,27 @@ def run(args):
         pretrained=False,
     ).cuda()
 
-    fp_tests = [
-        *args.test_dir.glob("**/*.png"),
-        *args.test_dir.glob("**/*.jpg"),
+    fp_targets = [
+        *args.image_dir.glob("**/*.png"),
+        *args.image_dir.glob("**/*.jpg"),
     ]
 
     font_file = args.font_file
     if not font_file:
         font_file = next(
             chain(
-                cfg.font_dir.glob("**/*.otf"),
-                cfg.font_dir.glob("**/*.ttf"),
+                cfg.training.font_dir.glob("**/*.otf"),
+                cfg.training.font_dir.glob("**/*.ttf"),
             )
         )
     font = ImageFont.truetype(font_file, args.font_size)
 
-    for fp in fp_tests:
+    for fp in fp_targets:
         result = _eval(
             predictor,
             fp,
             font,
-            cfg.det_input_size,
+            cfg.training.det_input_size,
             args.margin,
             args.min_confidence,
             args.label_offset_y,
@@ -97,9 +103,9 @@ def parse_args():
         help="Filename of recognition model weights. File should be located in config.reco_model_dir",
     )
     parser.add_argument(
-        "test_dir",
+        "image_dir",
         type=Path,
-        help="Images to generate predictions for",
+        help="Folder containing images to generate predictions for",
     )
     parser.add_argument(
         "--font-file",
@@ -197,22 +203,23 @@ def _draw_matches(
     draw = ImageDraw.Draw(overlay)
     for m in matches:
         a = int(m.confidence * 255)
-
-        width = round(m.confidence * 5)
-
         y1, x1, y2, x2 = m.bbox
 
+        width = round(m.confidence * 5)
         draw.rectangle(
             (x1, y1, x2, y2),
-            outline=(255, 0, 0, a),
+            outline=(0, 255, 0, a),
             width=width,
         )
 
+    for m in matches:
+        a = int(m.confidence * 255)
+        y1, x1, y2, x2 = m.bbox
         draw.text(
             (x1, y1 - label_offset_y),
             m.value,
             font=font,
-            fill=(0, 255, 0, a),
+            fill=(255, 0, 0, a),
         )
 
     im.paste(overlay, (0, 0), overlay)
@@ -229,22 +236,23 @@ def _draw_lines(
     draw = ImageDraw.Draw(overlay)
     for ln in lines:
         a = int(ln.confidence * 255)
-
-        width = round(ln.confidence * 5)
-
         y1, x1, y2, x2 = ln.bbox
 
+        width = round(ln.confidence * 5)
         draw.rectangle(
             (x1, y1, x2, y2),
-            outline=(255, 0, 0, a),
+            outline=(0, 255, 0, a),
             width=width,
         )
 
+    for ln in lines:
+        a = int(ln.confidence * 255)
+        y1, x1, y2, x2 = ln.bbox
         draw.text(
             (x1, y1 - label_offset_y),
             ln.value,
             font=font,
-            fill=(0, 255, 0, a),
+            fill=(255, 0, 0, a),
         )
 
     im.paste(overlay, (0, 0), overlay)
@@ -259,24 +267,25 @@ def _draw_blocks(
 ):
     overlay = Image.new("RGBA", im.size)
     draw = ImageDraw.Draw(overlay)
-    for ln in blocks:
-        a = int(ln.confidence * 255)
+    for blk in blocks:
+        a = int(blk.confidence * 255)
+        y1, x1, y2, x2 = blk.bbox
 
-        width = round(ln.confidence * 5)
-
-        y1, x1, y2, x2 = ln.bbox
-
+        width = round(blk.confidence * 5)
         draw.rectangle(
             (x1, y1, x2, y2),
-            outline=(255, 0, 0, a),
+            outline=(0, 255, 0, a),
             width=width,
         )
 
+    for blk in blocks:
+        a = int(blk.confidence * 255)
+        y1, x1, y2, x2 = blk.bbox
         draw.text(
             (x1, y2 + label_offset_y),
-            ln.value,
+            blk.value,
             font=font,
-            fill=(0, 255, 0, a),
+            fill=(255, 0, 0, a),
         )
 
     im.paste(overlay, (0, 0), overlay)
