@@ -2,7 +2,6 @@ import argparse
 import json
 import random
 import sqlite3
-import sys
 from argparse import Namespace
 from pathlib import Path
 
@@ -57,7 +56,7 @@ def run(args):
         train_labels, val_labels = generate_labels(args, labels)
 
     print(
-        f"Found {len(train_labels)} training samples and {len(val_labels)} validation samples"
+        f"Training with {len(train_labels)} training samples and {len(val_labels)} validation samples"
     )
 
     fp_train.write_text(json.dumps(train_labels), encoding="utf-8")
@@ -125,7 +124,7 @@ def parse_args():
     parser.add_argument(
         "--lr",
         type=float,
-        default=0.002,
+        default=0.0005,
     )
     parser.add_argument(
         "--resume-path",

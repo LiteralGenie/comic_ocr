@@ -12,10 +12,12 @@ from lib.config import Config
 from lib.constants import KOREAN_ALPHABET
 from lib.label_utils import (
     OcrMatch,
-    StitchedWord,
+    StitchedBlock,
+    StitchedLine,
     calc_windows,
     eval_window,
-    stitch_words,
+    stitch_blocks,
+    stitch_lines,
 )
 
 
@@ -72,8 +74,9 @@ def run(args):
             args.min_confidence,
             args.label_offset_y,
         )
-        result["char_preview"].save(cfg.debug_dir / f"{fp.stem}_char.png")
-        # result["word_preview"].save(config.debug_dir / f"{fp.stem}_word.png")
+        result["match_preview"].save(cfg.debug_dir / f"{fp.stem}_char.png")
+        result["line_preview"].save(cfg.debug_dir / f"{fp.stem}_line.png")
+        result["block_preview"].save(cfg.debug_dir / f"{fp.stem}_block.png")
 
 
 def parse_args():
@@ -110,7 +113,8 @@ def parse_args():
     parser.add_argument(
         "--label-offset-y",
         type=int,
-        default=-20,
+        default=20,
+        help="Offset text labels by this much from bbox edge. Should be a positive integer.",
     )
     parser.add_argument(
         "--min-confidence",
@@ -151,16 +155,24 @@ def _eval(
         matches.extend(r["matches"])
 
     matches.sort(key=lambda m: m.confidence)
-    char_preview = _draw_chars(
+    match_preview = _draw_matches(
         matches,
         im.copy(),
         font,
         label_offset_y,
     )
 
-    words = stitch_words(matches)
-    word_preview = _draw_words(
-        words,
+    lines = stitch_lines(matches)
+    line_preview = _draw_lines(
+        lines,
+        im.copy(),
+        font,
+        label_offset_y,
+    )
+
+    blocks = stitch_blocks(lines)
+    block_preview = _draw_blocks(
+        blocks,
         im.copy(),
         font,
         label_offset_y,
@@ -168,13 +180,14 @@ def _eval(
 
     return dict(
         im=im,
-        char_preview=char_preview,
-        word_preview=word_preview,
+        match_preview=match_preview,
+        line_preview=line_preview,
+        block_preview=block_preview,
         matches=matches,
     )
 
 
-def _draw_chars(
+def _draw_matches(
     matches: list[OcrMatch],
     im: Image.Image,
     font: ImageFont.FreeTypeFont,
@@ -196,7 +209,7 @@ def _draw_chars(
         )
 
         draw.text(
-            (x1, y1 + label_offset_y),
+            (x1, y1 - label_offset_y),
             m.value,
             font=font,
             fill=(0, 255, 0, a),
@@ -206,20 +219,20 @@ def _draw_chars(
     return im
 
 
-def _draw_words(
-    words: list[StitchedWord],
+def _draw_lines(
+    lines: list[StitchedLine],
     im: Image.Image,
     font: ImageFont.FreeTypeFont,
     label_offset_y: int,
 ):
     overlay = Image.new("RGBA", im.size)
     draw = ImageDraw.Draw(overlay)
-    for w in words:
-        a = int(w.confidence * 255)
+    for ln in lines:
+        a = int(ln.confidence * 255)
 
-        width = round(w.confidence * 5)
+        width = round(ln.confidence * 5)
 
-        y1, x1, y2, x2 = w.bbox
+        y1, x1, y2, x2 = ln.bbox
 
         draw.rectangle(
             (x1, y1, x2, y2),
@@ -228,8 +241,40 @@ def _draw_words(
         )
 
         draw.text(
-            (x1, y1 + label_offset_y),
-            w.value,
+            (x1, y1 - label_offset_y),
+            ln.value,
+            font=font,
+            fill=(0, 255, 0, a),
+        )
+
+    im.paste(overlay, (0, 0), overlay)
+    return im
+
+
+def _draw_blocks(
+    blocks: list[StitchedBlock],
+    im: Image.Image,
+    font: ImageFont.FreeTypeFont,
+    label_offset_y: int,
+):
+    overlay = Image.new("RGBA", im.size)
+    draw = ImageDraw.Draw(overlay)
+    for ln in blocks:
+        a = int(ln.confidence * 255)
+
+        width = round(ln.confidence * 5)
+
+        y1, x1, y2, x2 = ln.bbox
+
+        draw.rectangle(
+            (x1, y1, x2, y2),
+            outline=(255, 0, 0, a),
+            width=width,
+        )
+
+        draw.text(
+            (x1, y2 + label_offset_y),
+            ln.value,
             font=font,
             fill=(0, 255, 0, a),
         )
