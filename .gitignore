@@ -1,5 +1,3 @@
-data/*
-!data/fonts/unifont/
 venv/
 
 *pyc

@@ -253,6 +253,8 @@ def _draw_lines(
             ln.value,
             font=font,
             fill=(255, 0, 0, a),
+            stroke_width=1,
+            stroke_fill=(0, 0, 0, 255),
         )
 
     im.paste(overlay, (0, 0), overlay)
@@ -286,6 +288,8 @@ def _draw_blocks(
             blk.value,
             font=font,
             fill=(255, 0, 0, a),
+            stroke_width=1,
+            stroke_fill=(0, 0, 0, 255),
         )
 
     im.paste(overlay, (0, 0), overlay)

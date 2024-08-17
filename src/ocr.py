@@ -11,7 +11,7 @@ import torch
 from doctr import models
 from doctr.models import ocr_predictor
 from doctr.models.predictor import OCRPredictor
-from PIL import Image, ImageFont
+from PIL import Image, ImageDraw, ImageFont
 from tqdm import tqdm
 
 from inspect_model import _draw_blocks, _draw_matches
@@ -19,6 +19,7 @@ from lib.config import Config
 from lib.constants import KOREAN_ALPHABET
 from lib.label_utils import (
     OcrMatch,
+    StitchedBlock,
     calc_windows,
     eval_window,
     stitch_blocks,
@@ -87,7 +88,12 @@ def run(args):
         det_arch=det_model,
         reco_arch=reco_model,
         pretrained=True,
-    ).cuda()
+    )
+    if not args.cpu:
+        if torch.cuda.is_available():
+            predictor = predictor.cuda()
+        else:
+            print("No GPU detected, running models on CPU")
 
     fp_targets = [
         *args.image_dir.glob("**/*.png"),
@@ -100,23 +106,29 @@ def run(args):
     pages: list[Page] = []
 
     for idx, fp in enumerate(fp_targets):
-        im, matches = _eval(
+        im = _load_im(fp, args.resize)
+
+        matches = _eval(
             predictor,
-            fp,
+            im,
             cfg.det_input_size,
             args.margin,
             0,  # args.min_confidence,
             f"({idx + 1} / {len(fp_targets)}) {fp.name}",
-            args.resize,
         )
 
         if args.preview:
+            font = ImageFont.truetype(
+                args.preview_font,
+                args.preview_font_size,
+            )
+
             prefix = f"{fp.parent.stem}_{fp.stem}"
 
             match_preview = _draw_matches(
                 matches,
                 im.copy(),
-                args.preview_font,
+                font,
                 20,
             )
             match_preview.save(cfg.debug_dir / f"{prefix}_match_preview.png")
@@ -126,7 +138,7 @@ def run(args):
             block_preview = _draw_blocks(
                 blocks,
                 im.copy(),
-                args.preview_font,
+                font,
                 20,
             )
             block_preview.save(cfg.debug_dir / f"{prefix}_bubble_preview.png")
@@ -180,29 +192,35 @@ def parse_args():
         help="Input images are sliced into overlapping windows according to margin size before being fed to the predictor.",
     )
     parser.add_argument(
+        "--cpu",
+        action="store_true",
+        default=False,
+        help="Run models on CPU instead of GPU.",
+    )
+    parser.add_argument(
         "--preview",
         action="store_true",
         help="Generate preview of extracted text and save to the debug_dir specified in config file.",
     )
     parser.add_argument(
         "--preview-font",
-        type=ImageFont.FreeTypeFont,
+        type=Path,
         default="assets/fonts/unifont/unifont-15.1.05.otf",
         help="Path to font to use for previews.",
+    )
+    parser.add_argument(
+        "--preview-font-size",
+        type=float,
+        default=20,
     )
 
     return parser.parse_args()
 
 
-def _eval(
-    model: OCRPredictor,
+def _load_im(
     fp: Path,
-    crop_size: int,
-    margin_size: int,
-    min_confidence: float,
-    desc: str,
     resize_percentage: float | None,
-) -> tuple[Image.Image, list[OcrMatch]]:
+):
     im = Image.open(fp).convert("RGBA")
     if resize_percentage:
         w, h = im.size
@@ -212,6 +230,17 @@ def _eval(
         print(f"Resizing {fp.name} from {w}x{h} to {w2}x{h2} before scan")
         im = im.resize((w2, h2), Image.Resampling.BICUBIC)
 
+    return im
+
+
+def _eval(
+    model: OCRPredictor,
+    im: Image.Image,
+    crop_size: int,
+    margin_size: int,
+    min_confidence: float,
+    desc: str,
+) -> list[OcrMatch]:
     windows = calc_windows(im.size, crop_size, margin_size)
 
     pbar = tqdm(desc=desc, total=len(windows))
@@ -226,7 +255,7 @@ def _eval(
 
     matches.sort(key=lambda m: m.confidence)
 
-    return im, matches
+    return matches
 
 
 def _dump_data(
@@ -278,6 +307,76 @@ def _confirm_overwrite_if_exists(fp: Path):
                 sys.exit()
             else:
                 continue
+
+
+def _draw_matches(
+    matches: list[OcrMatch],
+    im: Image.Image,
+    font: ImageFont.FreeTypeFont,
+    label_offset_y: int,
+):
+    overlay = Image.new("RGBA", im.size)
+    draw = ImageDraw.Draw(overlay)
+    for m in matches:
+        a = int(m.confidence * 255)
+        y1, x1, y2, x2 = m.bbox
+
+        width = round(m.confidence * 5)
+        draw.rectangle(
+            (x1, y1, x2, y2),
+            outline=(0, 255, 0, a),
+            width=width,
+        )
+
+    for m in matches:
+        a = int(m.confidence * 255)
+        y1, x1, y2, x2 = m.bbox
+        draw.text(
+            (x1, y1 - label_offset_y),
+            m.value,
+            font=font,
+            fill=(255, 50, 50, a),
+            stroke_width=1,
+            stroke_fill=(0, 0, 0, 255),
+        )
+
+    im.paste(overlay, (0, 0), overlay)
+    return im
+
+
+def _draw_blocks(
+    blocks: list[StitchedBlock],
+    im: Image.Image,
+    font: ImageFont.FreeTypeFont,
+    label_offset_y: int,
+):
+    overlay = Image.new("RGBA", im.size)
+    draw = ImageDraw.Draw(overlay)
+    for blk in blocks:
+        a = int(blk.confidence * 255)
+        y1, x1, y2, x2 = blk.bbox
+
+        width = round(blk.confidence * 5)
+        draw.rectangle(
+            (x1, y1, x2, y2),
+            outline=(0, 255, 0, a),
+            width=width,
+        )
+
+    for blk in blocks:
+        a = int(blk.confidence * 255)
+        y1, x1, y2, x2 = blk.bbox
+        draw.text(
+            (x1, y2 + label_offset_y),
+            blk.value,
+            font=font,
+            fill=(255, 50, 0, a),
+            stroke_width=1,
+            stroke_fill=(0, 0, 0, 255),
+        )
+
+    im.paste(overlay, (0, 0), overlay)
+    return im
 
 
 if __name__ == "__main__":
