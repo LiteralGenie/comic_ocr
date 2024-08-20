@@ -6,13 +6,15 @@ from lib.config import Config
 
 
 def det_deletion_scan(cfg: Config):
-    db = sqlite3.connect(cfg.det_dataset_dir / "_det_labels.sqlite")
+    db = sqlite3.connect(cfg.training.det_dataset_dir / "_det_labels.sqlite")
     db.row_factory = sqlite3.Row
 
     ids = [r["id"] for r in db.execute("SELECT id FROM labels")]
 
     missing = [
-        f"{id}" for id in ids if not (cfg.det_dataset_dir / f"{id}.png").exists()
+        f"{id}"
+        for id in ids
+        if not (cfg.training.det_dataset_dir / f"{id}.png").exists()
     ]
 
     if not missing:
@@ -30,7 +32,7 @@ def det_deletion_scan(cfg: Config):
 
 
 def det_insertion_scan(cfg: Config, fp_import: Path):
-    db = sqlite3.connect(cfg.det_dataset_dir / "_det_labels.sqlite")
+    db = sqlite3.connect(cfg.training.det_dataset_dir / "_det_labels.sqlite")
     db.row_factory = sqlite3.Row
 
     existing = {r["id"] for r in db.execute("SELECT id FROM labels")}
@@ -43,7 +45,7 @@ def det_insertion_scan(cfg: Config, fp_import: Path):
     }
     to_add = []
     for k in labels:
-        if k not in existing and (cfg.det_dataset_dir / f"{k}.png").exists():
+        if k not in existing and (cfg.training.det_dataset_dir / f"{k}.png").exists():
             to_add.append(k)
 
     if not to_add:
@@ -64,13 +66,15 @@ def det_insertion_scan(cfg: Config, fp_import: Path):
 
 
 def reco_deletion_scan(cfg: Config):
-    db = sqlite3.connect(cfg.reco_dataset_dir / "_reco_labels.sqlite")
+    db = sqlite3.connect(cfg.training.reco_dataset_dir / "_reco_labels.sqlite")
     db.row_factory = sqlite3.Row
 
     ids = [r["id"] for r in db.execute("SELECT id FROM labels")]
 
     missing = [
-        f"{id}" for id in ids if not (cfg.reco_dataset_dir / f"{id}.png").exists()
+        f"{id}"
+        for id in ids
+        if not (cfg.training.reco_dataset_dir / f"{id}.png").exists()
     ]
 
     if not missing:
@@ -88,7 +92,7 @@ def reco_deletion_scan(cfg: Config):
 
 
 def reco_insertion_scan(cfg: Config, fp_import: Path):
-    db = sqlite3.connect(cfg.reco_dataset_dir / "_reco_labels.sqlite")
+    db = sqlite3.connect(cfg.training.reco_dataset_dir / "_reco_labels.sqlite")
     db.row_factory = sqlite3.Row
 
     existing = {r["id"] for r in db.execute("SELECT id FROM labels")}
@@ -101,7 +105,7 @@ def reco_insertion_scan(cfg: Config, fp_import: Path):
     }
     to_add = []
     for k in labels:
-        if k not in existing and (cfg.reco_dataset_dir / f"{k}.png").exists():
+        if k not in existing and (cfg.training.reco_dataset_dir / f"{k}.png").exists():
             to_add.append(k)
 
     if not to_add:

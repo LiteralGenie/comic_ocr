@@ -31,57 +31,68 @@ from lib.render_page import dump_dataclass
 @dataclass
 class Page:
     im: Image.Image
-    fp_im: Path
+    filename: str
     matches: list[OcrMatch]
 
 
-def run(args):
-    if not args.image_dir.exists():
-        raise Exception(f"image_dir does not exist: {args.image_dir.absolute()}")
+def ocr(
+    image_dir: Path,
+    det_arch="db_resnet50",
+    det_weights: Path | None = None,
+    det_input_size=1024,
+    reco_arch="parseq",
+    reco_weights: Path | None = None,
+    out_file: Path | None = None,
+    margin=100,
+    cpu=False,
+    resize: float | None = None,
+    preview_dir: Path | None = None,
+    preview_font: Path | None = None,
+    preview_font_size: float = 20,
+):
+    if not image_dir.exists():
+        raise Exception(f"image_dir does not exist: {image_dir.absolute()}")
 
-    args.out_file = args.out_file or args.image_dir / "ocr_data.json"
-    _confirm_overwrite_if_exists(args.out_file)
+    out_file = out_file or image_dir / "ocr_data.json"
+    _confirm_overwrite_if_exists(out_file)
 
-    cfg = Config.load_toml(args.config_file)
-    cfg.debug_dir.mkdir(parents=True, exist_ok=True)
+    if preview_dir:
+        preview_dir.mkdir(parents=True, exist_ok=True)
+        print(f"Saving previews to {preview_dir.absolute()}")
 
-    if args.preview:
-        cfg.debug_dir.mkdir(parents=True, exist_ok=True)
-        print(f"Saving previews to {cfg.debug_dir.absolute()}")
-
-    det_model = models.detection.__dict__[cfg.det_arch](
+    det_model = models.detection.__dict__[det_arch](
         pretrained=False,
         pretrained_backbone=False,
     )
-    if cfg.det_weights:
-        print(f"Loading detector model weights from {cfg.det_weights.absolute()}")
+    if det_weights:
+        print(f"Loading detector model weights from {det_weights.absolute()}")
         det_params = torch.load(
-            cfg.det_weights,
+            det_weights,
             map_location="cpu",
             weights_only=True,
         )
         det_model.load_state_dict(det_params)
     else:
         print(
-            f"Loading default weights (pre-trained) for detector network ({cfg.det_arch})"
+            f"Loading default weights (pre-trained) for detector network ({det_arch})"
         )
 
-    reco_model = models.recognition.__dict__[cfg.reco_arch](
+    reco_model = models.recognition.__dict__[reco_arch](
         vocab=KOREAN_ALPHABET,
         pretrained=False,
         pretrained_backbone=False,
     )
-    if cfg.reco_weights:
-        print(f"Loading detector model weights from {cfg.reco_weights.absolute()}")
+    if reco_weights:
+        print(f"Loading detector model weights from {reco_weights.absolute()}")
         reco_params = torch.load(
-            cfg.reco_weights,
+            reco_weights,
             map_location="cpu",
             weights_only=True,
         )
         reco_model.load_state_dict(reco_params)
     else:
         print(
-            f"Loading default weights (pre-trained) for recognizer network ({cfg.reco_arch})"
+            f"Loading default weights (pre-trained) for recognizer network ({reco_arch})"
         )
 
     predictor = ocr_predictor(
@@ -89,15 +100,15 @@ def run(args):
         reco_arch=reco_model,
         pretrained=True,
     )
-    if not args.cpu:
+    if not cpu:
         if torch.cuda.is_available():
             predictor = predictor.cuda()
         else:
             print("No GPU detected, running models on CPU")
 
     fp_targets = [
-        *args.image_dir.glob("**/*.png"),
-        *args.image_dir.glob("**/*.jpg"),
+        *image_dir.glob("**/*.png"),
+        *image_dir.glob("**/*.jpg"),
     ]
     fp_targets.sort(key=lambda fp: fp.name)
     print(f"Found {len(fp_targets)} target images.")
@@ -106,21 +117,21 @@ def run(args):
     pages: list[Page] = []
 
     for idx, fp in enumerate(fp_targets):
-        im = _load_im(fp, args.resize)
+        im = _load_im(fp, resize)
 
         matches = _eval(
             predictor,
             im,
-            cfg.det_input_size,
-            args.margin,
+            det_input_size,
+            margin,
             0,  # args.min_confidence,
             f"({idx + 1} / {len(fp_targets)}) {fp.name}",
         )
 
-        if args.preview:
+        if preview_dir:
             font = ImageFont.truetype(
-                args.preview_font,
-                args.preview_font_size,
+                preview_font,
+                preview_font_size,
             )
 
             prefix = f"{fp.parent.stem}_{fp.stem}"
@@ -131,7 +142,7 @@ def run(args):
                 font,
                 20,
             )
-            match_preview.save(cfg.debug_dir / f"{prefix}_match_preview.png")
+            match_preview.save(preview_dir / f"{prefix}_match_preview.png")
 
             lines = stitch_lines(matches)
             blocks = stitch_blocks(lines)
@@ -141,19 +152,19 @@ def run(args):
                 font,
                 20,
             )
-            block_preview.save(cfg.debug_dir / f"{prefix}_bubble_preview.png")
+            block_preview.save(preview_dir / f"{prefix}_bubble_preview.png")
 
         pages.append(
             Page(
                 im=im,
-                fp_im=fp,
+                filename=fp.name,
                 matches=matches,
             )
         )
 
     print(f"Found {len(matches)} words.")
 
-    _dump_data(pages, args.out_file)
+    _dump_data(pages, out_file)
 
 
 def parse_args():
@@ -264,7 +275,7 @@ def _dump_data(
 ):
     print(f"Saving to {fp.absolute()}")
 
-    data = []
+    data = dict()
 
     for pg in pages:
         im_data = np.array(pg.im).astype(np.uint8)
@@ -278,12 +289,10 @@ def _dump_data(
             for m in pg.matches
         ]
 
-        data.append(
-            dict(
-                filename=fp.name,
-                sha256=im_hash,
-                matches=with_ids,
-            )
+        data[pg.filename] = dict(
+            filename=pg.filename,
+            sha256=im_hash,
+            matches=with_ids,
         )
 
     fp.write_text(
@@ -381,4 +390,26 @@ def _draw_blocks(
 
 if __name__ == "__main__":
     args = parse_args()
-    run(args)
+
+    cfg = Config.load_toml(args.config_file)
+
+    kwargs = {
+        k: v
+        for k, v in vars(args).items()
+        if k
+        not in [
+            "message_type",
+            "config_file",
+            "preview",
+        ]
+    }
+
+    ocr(
+        det_arch=cfg.det_arch,
+        det_weights=cfg.det_weights,
+        det_input_size=cfg.det_input_size,
+        reco_arch=cfg.reco_arch,
+        reco_weights=cfg.reco_weights,
+        preview_dir=cfg.debug_dir if args.preview else None,
+        **kwargs,
+    )

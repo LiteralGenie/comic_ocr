@@ -16,13 +16,13 @@ WORKER_CTX = dict()
 
 def run(args):
     cfg = Config.load_toml(args.config_file)
-    cfg.reco_dataset_dir.mkdir(parents=True, exist_ok=True)
+    cfg.training.reco_dataset_dir.mkdir(parents=True, exist_ok=True)
 
-    db = init_db(cfg.reco_dataset_dir)
+    db = init_db(cfg.training.reco_dataset_dir)
 
-    WORKER_CTX["vocab"] = load_vocab(cfg.vocab_file)
-    WORKER_CTX["font_dir"] = cfg.font_dir
-    WORKER_CTX["image_dir"] = cfg.image_dir
+    WORKER_CTX["vocab"] = load_vocab(cfg.training.vocab_file)
+    WORKER_CTX["font_dir"] = cfg.training.font_dir
+    WORKER_CTX["image_dir"] = cfg.training.image_dir
 
     count = 0
     with multiprocessing.Pool(args.workers) as pool:
@@ -35,7 +35,7 @@ def run(args):
                 pbar.update()
                 count += 1
 
-                fp_out = cfg.reco_dataset_dir / f"{d['id']}.png"
+                fp_out = cfg.training.reco_dataset_dir / f"{d['id']}.png"
                 d["sample"].save(fp_out)
                 insert_recognition_label(db, d)
 

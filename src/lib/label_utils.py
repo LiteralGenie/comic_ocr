@@ -193,10 +193,10 @@ def eval_window(
                         continue
 
                     bbox = (
-                        y1 + window["bbox"][0],
-                        x1 + window["bbox"][1],
-                        y2 + window["bbox"][0],
-                        x2 + window["bbox"][1],
+                        int(y1 + window["bbox"][0]),
+                        int(x1 + window["bbox"][1]),
+                        int(y2 + window["bbox"][0]),
+                        int(x2 + window["bbox"][1]),
                     )
 
                     matches.append(
