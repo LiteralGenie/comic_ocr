@@ -3,8 +3,8 @@ from doctr.io import Document
 from doctr.models.predictor import OCRPredictor
 from PIL import Image, ImageDraw, ImageFont
 
-from lib.label_utils import OcrMatch, StitchedBlock, StitchedLine
-from lib.misc_utils import Bbox
+from .label_utils import OcrMatch, StitchedBlock, StitchedLine
+from .misc_utils import Bbox
 
 
 def calc_windows(

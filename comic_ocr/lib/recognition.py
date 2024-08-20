@@ -37,7 +37,7 @@ from torchvision.transforms.v2 import (
 )
 from tqdm.auto import tqdm
 
-from lib.doctr_utils import (
+from .doctr_utils import (
     EarlyStopper,
     fit_one_epoch,
     plot_recorder,

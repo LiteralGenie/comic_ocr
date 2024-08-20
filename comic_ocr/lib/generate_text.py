@@ -10,8 +10,8 @@ import numpy as np
 from cv2.typing import MatLike
 from PIL import Image, ImageDraw, ImageFont
 
-from lib.generate_bubbles import Bubble
-from lib.misc_utils import Bbox, dilate
+from .generate_bubbles import Bubble
+from .misc_utils import Bbox, dilate
 
 
 class InvalidFontFile(Exception):
