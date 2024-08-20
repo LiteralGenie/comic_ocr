@@ -18,4 +18,4 @@ Homepage = "https://github.com/LiteralGenie/ocr_data"
 Issues = "https://github.com/LiteralGenie/ocr_data/issues"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src"]
+packages = ["comic_ocr"]
