@@ -7,11 +7,11 @@ from typing import Literal
 
 from PIL import ImageFont
 
-from lib.generate_bubbles import generate_bubbles
-from lib.generate_panels import generate_panels
-from lib.generate_text import InvalidFontFile, generate_texts
-from lib.misc_utils import Bbox
-from lib.render_page import RenderContext
+from .generate_bubbles import generate_bubbles
+from .generate_panels import generate_panels
+from .generate_text import InvalidFontFile, generate_texts
+from .misc_utils import Bbox
+from .render_page import RenderContext
 
 
 @dataclass

@@ -11,14 +11,13 @@ import torch
 from doctr import models
 from doctr.models import ocr_predictor
 from doctr.models.predictor import OCRPredictor
-from PIL import Image, ImageDraw, ImageFont
-from tqdm import tqdm
-
 from lib.config import Config
 from lib.constants import KOREAN_ALPHABET
 from lib.inference_utils import calc_windows, draw_blocks, draw_matches, eval_window
 from lib.label_utils import OcrMatch, StitchedBlock, stitch_blocks, stitch_lines
 from lib.render_page import dump_dataclass
+from PIL import Image, ImageDraw, ImageFont
+from tqdm import tqdm
 
 
 @dataclass
@@ -91,7 +90,6 @@ def run(
     predictor = ocr_predictor(
         det_arch=det_model,
         reco_arch=reco_model,
-        pretrained=True,
     )
     if not cpu:
         if torch.cuda.is_available():

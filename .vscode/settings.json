@@ -15,5 +15,6 @@
             "name": "doctr",
             "depth": 3
         }
-    ]
+    ],
+    "python.analysis.importFormat": "relative",
 }
