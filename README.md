@@ -4,7 +4,7 @@ Samples:
 
 -   Detection samples: [1](https://github.com/LiteralGenie/comic_ocr/blob/master/assets/readme_images/detection_1.png) [2](https://github.com/LiteralGenie/comic_ocr/blob/master/assets/readme_images/detection_2.png) [3](https://github.com/LiteralGenie/comic_ocr/blob/master/assets/readme_images/detection_3.png)
 -   Recognition samples: [1](https://github.com/LiteralGenie/comic_ocr/blob/master/assets/readme_images/reco_1.png) [2](https://github.com/LiteralGenie/comic_ocr/blob/master/assets/readme_images/reco_2.png) [3](https://github.com/LiteralGenie/comic_ocr/blob/master/assets/readme_images/reco_3.png)
--   Predictions: https://github.com/LiteralGenie/comic_ocr/tree/master/assets/readme_images/sample_outputs 
+-   Post-training predictions: https://github.com/LiteralGenie/comic_ocr/tree/master/assets/readme_images/sample_outputs 
 
 Pre-trained weights can be found in the [releases section](https://github.com/LiteralGenie/comic_ocr/releases).
 
