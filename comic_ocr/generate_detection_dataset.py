@@ -7,25 +7,24 @@ import traceback
 from pathlib import Path
 
 import numpy as np
-from PIL import Image
-from tqdm import tqdm
-
 from lib.config import Config
 from lib.label_utils import load_vocab, make_context
 from lib.render_page import RenderContext, build_render_info, render_page
+from PIL import Image
+from tqdm import tqdm
 
 WORKER_CTX = dict()
 
 
 def run(args):
     cfg = Config.load_toml(args.config_file)
-    cfg.det_dataset_dir.mkdir(parents=True, exist_ok=True)
+    cfg.training.det_dataset_dir.mkdir(parents=True, exist_ok=True)
 
-    db = init_db(cfg.det_dataset_dir)
+    db = init_db(cfg.training.det_dataset_dir)
 
-    WORKER_CTX["vocab"] = load_vocab(cfg.vocab_file)
-    WORKER_CTX["font_dir"] = cfg.font_dir
-    WORKER_CTX["image_dir"] = cfg.image_dir
+    WORKER_CTX["vocab"] = load_vocab(cfg.training.vocab_file)
+    WORKER_CTX["font_dir"] = cfg.training.font_dir
+    WORKER_CTX["image_dir"] = cfg.training.image_dir
 
     count = 0
     with multiprocessing.Pool(args.workers) as pool:
@@ -37,7 +36,7 @@ def run(args):
             pbar.update()
 
             img_hash = d["detection"]["label"]["img_hash"]
-            fp_out = cfg.det_dataset_dir / f"{img_hash}.png"
+            fp_out = cfg.training.det_dataset_dir / f"{img_hash}.png"
 
             d["detection"]["sample"].save(fp_out)
             insert_detection_label(db, d["detection"]["label"])

@@ -1,14 +1,14 @@
 import argparse
 from pathlib import Path
 
-from doctr import models
-from doctr.datasets import DetectionDataset
-import numpy as np
-from torchvision.transforms.v2 import Normalize
-from doctr.utils.metrics import LocalizationConfusion
 import torch
+from doctr import models
 from doctr import transforms as T
+from doctr.datasets import DetectionDataset
+from doctr.utils.metrics import LocalizationConfusion
+from lib.config import Config
 from torch.utils.data import DataLoader, SequentialSampler
+from torchvision.transforms.v2 import Normalize
 from tqdm import tqdm
 
 
@@ -23,27 +23,16 @@ def parse_args():
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
+        "config_file",
+        type=Path,
+    )
+    parser.add_argument(
         "mode",
         choices=["detection", "recognition", "det", "reco"],
     )
     parser.add_argument(
-        "arch",
-        type=str,
-        help="https://mindee.github.io/doctr/modules/models.html",
-    )
-    parser.add_argument(
         "weights",
         type=Path,
-    )
-    # @todo: script should generate labels but this'll require font / image dir inputs
-    parser.add_argument(
-        "dataset_dir",
-        type=Path,
-    )
-    parser.add_argument(
-        "--input-size",
-        type=int,
-        default=1024,
     )
     parser.add_argument(
         "--max-batches",
@@ -55,14 +44,16 @@ def parse_args():
 
 
 def eval_det(args):
+    cfg = Config.load_toml(args.config_file)
+
     val_set = DetectionDataset(
-        img_folder=args.dataset_dir,
-        label_path=args.dataset_dir / "val_labels.json",
+        img_folder=str(cfg.training.det_dataset_dir),
+        label_path=str(cfg.training.det_dataset_dir / "_val_labels.json"),
         sample_transforms=T.SampleCompose(
             (
                 [
                     T.Resize(
-                        (args.input_size, args.input_size),
+                        (cfg.training.det_input_size, cfg.training.det_input_size),
                         preserve_aspect_ratio=True,
                         symmetric_pad=True,
                     )
@@ -80,7 +71,7 @@ def eval_det(args):
         collate_fn=val_set.collate_fn,
     )
 
-    model = models.detection.__dict__[args.arch](
+    model = models.detection.__dict__[cfg.training.det_arch](
         pretrained=False,
         class_names=val_set.class_names,
     )
