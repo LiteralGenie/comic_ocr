@@ -13,7 +13,7 @@ Pre-trained weights can be found in the [releases section](https://github.com/Li
 Get the code
 
 ```bash
-git clone https://github.com/LiteralGenie/comic_ocr
+git clone git@github.com:LiteralGenie/comic_ocr.git
 cd comic_ocr
 ```
 
