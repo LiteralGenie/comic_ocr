@@ -6,20 +6,19 @@ import torch
 from doctr import models
 from doctr.models import ocr_predictor
 from doctr.models.predictor import OCRPredictor
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageFont
 from tqdm import tqdm
 
 from lib.config import Config
 from lib.constants import KOREAN_ALPHABET
-from lib.label_utils import (
-    OcrMatch,
-    StitchedBlock,
-    StitchedLine,
+from lib.inference_utils import (
     calc_windows,
+    draw_blocks,
+    draw_lines,
+    draw_matches,
     eval_window,
-    stitch_blocks,
-    stitch_lines,
 )
+from lib.label_utils import OcrMatch, stitch_blocks, stitch_lines
 
 # @todo: avoid text / bbox collision by checking nearest bbox pos
 
@@ -161,7 +160,7 @@ def _eval(
         matches.extend(r["matches"])
 
     matches.sort(key=lambda m: m.confidence)
-    match_preview = _draw_matches(
+    match_preview = draw_matches(
         matches,
         im.copy(),
         font,
@@ -169,7 +168,7 @@ def _eval(
     )
 
     lines = stitch_lines(matches)
-    line_preview = _draw_lines(
+    line_preview = draw_lines(
         lines,
         im.copy(),
         font,
@@ -177,7 +176,7 @@ def _eval(
     )
 
     blocks = stitch_blocks(lines)
-    block_preview = _draw_blocks(
+    block_preview = draw_blocks(
         blocks,
         im.copy(),
         font,
@@ -191,109 +190,6 @@ def _eval(
         block_preview=block_preview,
         matches=matches,
     )
-
-
-def _draw_matches(
-    matches: list[OcrMatch],
-    im: Image.Image,
-    font: ImageFont.FreeTypeFont,
-    label_offset_y: int,
-):
-    overlay = Image.new("RGBA", im.size)
-    draw = ImageDraw.Draw(overlay)
-    for m in matches:
-        a = int(m.confidence * 255)
-        y1, x1, y2, x2 = m.bbox
-
-        width = round(m.confidence * 5)
-        draw.rectangle(
-            (x1, y1, x2, y2),
-            outline=(0, 255, 0, a),
-            width=width,
-        )
-
-    for m in matches:
-        a = int(m.confidence * 255)
-        y1, x1, y2, x2 = m.bbox
-        draw.text(
-            (x1, y1 - label_offset_y),
-            m.value,
-            font=font,
-            fill=(255, 0, 0, a),
-        )
-
-    im.paste(overlay, (0, 0), overlay)
-    return im
-
-
-def _draw_lines(
-    lines: list[StitchedLine],
-    im: Image.Image,
-    font: ImageFont.FreeTypeFont,
-    label_offset_y: int,
-):
-    overlay = Image.new("RGBA", im.size)
-    draw = ImageDraw.Draw(overlay)
-    for ln in lines:
-        a = int(ln.confidence * 255)
-        y1, x1, y2, x2 = ln.bbox
-
-        width = round(ln.confidence * 5)
-        draw.rectangle(
-            (x1, y1, x2, y2),
-            outline=(0, 255, 0, a),
-            width=width,
-        )
-
-    for ln in lines:
-        a = int(ln.confidence * 255)
-        y1, x1, y2, x2 = ln.bbox
-        draw.text(
-            (x1, y1 - label_offset_y),
-            ln.value,
-            font=font,
-            fill=(255, 0, 0, a),
-            stroke_width=1,
-            stroke_fill=(0, 0, 0, 255),
-        )
-
-    im.paste(overlay, (0, 0), overlay)
-    return im
-
-
-def _draw_blocks(
-    blocks: list[StitchedBlock],
-    im: Image.Image,
-    font: ImageFont.FreeTypeFont,
-    label_offset_y: int,
-):
-    overlay = Image.new("RGBA", im.size)
-    draw = ImageDraw.Draw(overlay)
-    for blk in blocks:
-        a = int(blk.confidence * 255)
-        y1, x1, y2, x2 = blk.bbox
-
-        width = round(blk.confidence * 5)
-        draw.rectangle(
-            (x1, y1, x2, y2),
-            outline=(0, 255, 0, a),
-            width=width,
-        )
-
-    for blk in blocks:
-        a = int(blk.confidence * 255)
-        y1, x1, y2, x2 = blk.bbox
-        draw.text(
-            (x1, y2 + label_offset_y),
-            blk.value,
-            font=font,
-            fill=(255, 0, 0, a),
-            stroke_width=1,
-            stroke_fill=(0, 0, 0, 255),
-        )
-
-    im.paste(overlay, (0, 0), overlay)
-    return im
 
 
 if __name__ == "__main__":

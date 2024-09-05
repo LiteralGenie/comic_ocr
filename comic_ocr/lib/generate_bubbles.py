@@ -1,15 +1,15 @@
+import random
 from dataclasses import dataclass
 from functools import cached_property
 from pathlib import Path
 from random import randint
-import random
 from uuid import uuid4
 
 import cv2
 import numpy as np
 
-from lib.generate_panels import Panel
-from lib.misc_utils import generate_poly, rand_gauss
+from .generate_panels import Panel
+from .misc_utils import generate_poly, rand_gauss
 
 
 @dataclass

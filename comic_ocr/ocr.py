@@ -11,21 +11,13 @@ import torch
 from doctr import models
 from doctr.models import ocr_predictor
 from doctr.models.predictor import OCRPredictor
-from PIL import Image, ImageDraw, ImageFont
-from tqdm import tqdm
-
-from inspect_model import _draw_blocks, _draw_matches
 from lib.config import Config
 from lib.constants import KOREAN_ALPHABET
-from lib.label_utils import (
-    OcrMatch,
-    StitchedBlock,
-    calc_windows,
-    eval_window,
-    stitch_blocks,
-    stitch_lines,
-)
+from lib.inference_utils import calc_windows, draw_blocks, draw_matches, eval_window
+from lib.label_utils import OcrMatch, StitchedBlock, stitch_blocks, stitch_lines
 from lib.render_page import dump_dataclass
+from PIL import Image, ImageDraw, ImageFont
+from tqdm import tqdm
 
 
 @dataclass
@@ -35,7 +27,7 @@ class Page:
     matches: list[OcrMatch]
 
 
-def ocr(
+def run(
     image_dir: Path,
     det_arch="db_resnet50",
     det_weights: Path | None = None,
@@ -98,7 +90,6 @@ def ocr(
     predictor = ocr_predictor(
         det_arch=det_model,
         reco_arch=reco_model,
-        pretrained=True,
     )
     if not cpu:
         if torch.cuda.is_available():
@@ -136,7 +127,7 @@ def ocr(
 
             prefix = f"{fp.parent.stem}_{fp.stem}"
 
-            match_preview = _draw_matches(
+            match_preview = draw_matches(
                 matches,
                 im.copy(),
                 font,
@@ -146,7 +137,7 @@ def ocr(
 
             lines = stitch_lines(matches)
             blocks = stitch_blocks(lines)
-            block_preview = _draw_blocks(
+            block_preview = draw_blocks(
                 blocks,
                 im.copy(),
                 font,
@@ -318,7 +309,7 @@ def _confirm_overwrite_if_exists(fp: Path):
                 continue
 
 
-def _draw_matches(
+def draw_matches(
     matches: list[OcrMatch],
     im: Image.Image,
     font: ImageFont.FreeTypeFont,
@@ -353,7 +344,7 @@ def _draw_matches(
     return im
 
 
-def _draw_blocks(
+def draw_blocks(
     blocks: list[StitchedBlock],
     im: Image.Image,
     font: ImageFont.FreeTypeFont,
@@ -404,7 +395,7 @@ if __name__ == "__main__":
         ]
     }
 
-    ocr(
+    run(
         det_arch=cfg.det_arch,
         det_weights=cfg.det_weights,
         det_input_size=cfg.det_input_size,

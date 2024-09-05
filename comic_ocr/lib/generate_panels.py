@@ -1,13 +1,13 @@
+import itertools
 from dataclasses import dataclass
 from functools import cached_property
-import itertools
 from random import randint
 from uuid import uuid4
 
 import cv2
 import numpy as np
 
-from lib.misc_utils import Bbox, Xywh, generate_poly
+from .misc_utils import Bbox, Xywh, generate_poly
 
 
 @dataclass

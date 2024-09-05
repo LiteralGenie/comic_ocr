@@ -1,17 +1,17 @@
+import random
 from dataclasses import dataclass, fields, is_dataclass
 from functools import cached_property
 from pathlib import Path
-import random
 from typing import TypeAlias
 
-from PIL import Image, ImageDraw, ImageFont
 import cv2
 import numpy as np
+from PIL import Image, ImageDraw, ImageFont
 
-from lib.generate_bubbles import Bubble
-from lib.generate_panels import Panel
-from lib.generate_text import Text
-from lib.misc_utils import Bbox
+from .generate_bubbles import Bubble
+from .generate_panels import Panel
+from .generate_text import Text
+from .misc_utils import Bbox
 
 Rgba: TypeAlias = tuple[int, int, int, int]
 

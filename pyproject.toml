@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "ocr_data_genie"
+name = "comic_ocr"
 version = "0.0.1"
 # readme = "README.md"
 requires-python = ">=3.8"
@@ -12,7 +12,20 @@ requires-python = ">=3.8"
 #     "License :: OSI Approved :: MIT License",
 #     "Operating System :: OS Independent",
 # ]
+dependencies = [
+    "matplotlib",
+    "opencv-python",
+    "pillow",
+    "python-doctr",
+    "toml",
+    "torch",
+    "torchvision",
+    "tqdm",
+]
 
 [project.urls]
 Homepage = "https://github.com/LiteralGenie/ocr_data"
 Issues = "https://github.com/LiteralGenie/ocr_data/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["comic_ocr"]

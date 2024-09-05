@@ -21,11 +21,11 @@ import time
 import numpy as np
 import torch
 import wandb
-from torch.optim.lr_scheduler import (
-    CosineAnnealingLR,
-    OneCycleLR,
-    PolynomialLR,
-)
+from doctr import transforms as T
+from doctr.datasets import DetectionDataset
+from doctr.models import detection, login_to_hub, push_to_hf_hub
+from doctr.utils.metrics import LocalizationConfusion
+from torch.optim.lr_scheduler import CosineAnnealingLR, OneCycleLR, PolynomialLR
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler
 from torchvision.transforms.v2 import (
     Compose,
@@ -36,18 +36,11 @@ from torchvision.transforms.v2 import (
 )
 from tqdm.auto import tqdm
 
-from doctr import transforms as T
-from doctr.datasets import DetectionDataset
-from doctr.models import detection, login_to_hub, push_to_hf_hub
-from doctr.utils.metrics import LocalizationConfusion
-
-import numpy as np
-
-from lib.doctr_utils import (
+from .doctr_utils import (
+    EarlyStopper,
     fit_one_epoch,
     plot_recorder,
     plot_samples,
-    EarlyStopper,
     record_lr,
 )
 
