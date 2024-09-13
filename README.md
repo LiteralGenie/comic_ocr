@@ -8,6 +8,8 @@ Samples:
 
 Pre-trained weights can be found in the [releases section](https://github.com/LiteralGenie/comic_ocr/releases).
 
+This was mainly designed to provide OCR functionality for https://github.com/LiteralGenie/reader
+
 # Setup
 
 Get the code
